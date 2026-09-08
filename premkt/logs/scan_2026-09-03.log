@@ -1,0 +1,16 @@
+==================================================================
+[2026-09-03 09:19:36 PDT] run.sh scan --no-news
+[1m
+premkt 部署自检   2026-09-03 12:19:37 Thu ET[0m
+[32m  ✓ [0mOpenD 进程在跑 (pid 1428)
+[32m  ✓ [0m127.0.0.1:11111 可连接
+2026-09-03 09:19:37,613 | 34726 | 8454889856 | [open_context_base.py:411] _init_connect_sync: New connect ready: conn=7501312961233127390(1) context=<futu.quote.open_quote_context.OpenQuoteContext object at 0x1287079b0>
+[32m  ✓ [0m连接握手 0.00s   market_us=AFTERNOON
+[32m  ✓ [0m行情已登录   交易登录=True
+[32m  ✓ [0m订阅额度 剩余 100/100，期权 20/20
+[32m  ✓ [0m快照可用   US.SPY = 772.78   更新于 2026-09-03 12:19:33
+[32m  ✓ [0m数据新鲜度校验通过（prev_close 对齐 2026-09-02 收盘）
+[32m  ✓ [0m时段 regular：盘中 —— 全部工具可用
+[33m  ! [0m要求时段 premarket，当前 regular —— 退出码 3
+2026-09-03 09:19:37,943 | 34726 | 13321187328 | [open_context_base.py:521] on_disconnect: Disconnected: conn=0(1) reason=CallClose
+[2026-09-03 09:19:38] 跳过：当前不是要求的时段 (premarket)

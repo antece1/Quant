@@ -181,7 +181,11 @@ SNAPSHOT_FIELDS = [
     "enable_short_sell", "short_available_volume", "amplitude", "volume_ratio",
     # 盘中需要：avg_price 是当日 VWAP，快照没有 change_rate，涨幅要自己算
     "avg_price", "bid_ask_ratio", "turnover_rate", "price_spread",
+    # 期权合约快照用（options.py 判断 0DTE 流动性）
+    "option_open_interest", "option_implied_volatility", "option_delta", "option_gamma",
+    "option_strike_price", "strike_time", "option_type",
     "highest52weeks_price", "lowest52weeks_price",
+    "highest_history_price", "lowest_history_price",
     "issued_shares", "outstanding_shares", "total_market_val", "circular_market_val",
     "pe_ttm_ratio", "earning_per_share",
     "pre_price", "pre_high_price", "pre_low_price", "pre_volume", "pre_turnover",
@@ -201,6 +205,13 @@ def _snapshot_chunk(q, chunk: list[str], skipped: list[str]) -> list[pd.DataFram
     if ret == RET_OK:
         return [df]
     if len(chunk) == 1:
+        # 单只失败先重试一次：整批连续代码同时"无权限"通常是瞬时错误，
+        # 直接跳过会悄悄丢掉 OTIS 这种正常的大盘股
+        time.sleep(0.3)
+        _throttle.wait()
+        ret2, df2 = q.get_market_snapshot(chunk)
+        if ret2 == RET_OK:
+            return [df2]
         skipped.append(chunk[0])
         return []
     mid = len(chunk) // 2
@@ -208,9 +219,14 @@ def _snapshot_chunk(q, chunk: list[str], skipped: list[str]) -> list[pd.DataFram
             + _snapshot_chunk(q, chunk[mid:], skipped))
 
 
-def snapshots(q, codes: list[str], quiet: bool = False) -> pd.DataFrame:
-    """分批取快照。单次上限 400，配置里用 200 留余量。"""
-    batch = RUNTIME["snapshot_batch"]
+def snapshots(q, codes: list[str], quiet: bool = False,
+              batch: int | None = None) -> pd.DataFrame:
+    """分批取快照。单次上限 400。
+
+    batch=400 时全市场 7161 只约 3.8s（18 次调用），batch=200 约 8.0s（36 次）——
+    实时监控要用 400，离线分析用默认值即可。
+    """
+    batch = batch or RUNTIME["snapshot_batch"]
     frames, skipped = [], []
     for i in range(0, len(codes), batch):
         frames += _snapshot_chunk(q, codes[i : i + batch], skipped)

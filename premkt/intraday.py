@@ -38,10 +38,12 @@ from futu import RET_OK, Market, SimpleFilter, SortDir, StockField
 from .catalyst import build_catalysts
 from .data import _Throttle, now_et, quote_ctx, session_label, snapshots, us_common_stocks
 from .fmt import c as _c, lj, rj, trunc
+from .options import target_0dte_date, zero_dte_status
 
 # get_stock_filter 限频 10 次/30 秒，比其他接口严得多
 _filter_throttle = _Throttle(max_calls=8, window=30.0)
 _capital_throttle = _Throttle(max_calls=25, window=30.0)
+_FULL_MODE = [False]   # 供打印函数判断是否处于全市场模式
 
 CFG = dict(
     min_price=2.0,
@@ -96,6 +98,24 @@ def screen_universe(q, cap: int) -> pd.DataFrame:
         if last_page or begin >= all_count:
             break
     return pd.DataFrame(rows)
+
+
+def full_universe(q) -> pd.DataFrame:
+    """全市场普通股，不做任何服务端预筛。
+
+    为什么需要它：get_stock_filter 在 US 市场只支持 CUR_PRICE / MARKET_VAL /
+    VOLUME_RATIO / CHANGE_RATE_5MIN 四个字段，**不支持 TURNOVER**。
+    用 VOLUME_RATIO≥1.3 当 universe 会把"成交额巨大但量比正常"的权重股
+    整个排除掉 —— 要按成交额排名就必须自己快照全市场再排。
+    13k 只 ≈ 65 次快照调用，节流后约 1 分钟，可以接受。
+    """
+    basic = us_common_stocks(q)
+    keep = basic[basic["exchange_type"].isin(
+        {"US_NASDAQ", "US_NYSE", "US_AMEX", "US_NYSE_AMERICAN", "US_ARCA"})]
+    delist = keep.get("delisting")
+    if delist is not None:
+        keep = keep[~delist.fillna(False).astype(bool)]
+    return keep[["code", "name"]].reset_index(drop=True)
 
 
 # ---------------------------------------------------------------------------
@@ -194,21 +214,35 @@ def _liquidity_adj(turnover: float, spread_pct: float) -> float:
 
 
 # ---------------------------------------------------------------------------
+RANK_KEYS = {"score": ("prelim", "score", "动量×买量评分"),
+             "turnover": ("turnover", "turnover", "成交额"),
+             "change": ("change_pct", "change_pct", "涨幅")}
+
+
 def run(top: int = 15, use_capital: bool = True, use_news: bool = False,
-        split_cap: float | None = None, per_bucket: int = 7) -> pd.DataFrame:
+        split_cap: float | None = None, per_bucket: int = 7,
+        full: bool = False, rank_by: str = "score",
+        use_odte: bool = False) -> pd.DataFrame:
     sess = session_label()
+    _FULL_MODE[0] = full
     with quote_ctx() as q:
-        print(_c("\n[1/4] 服务端粗筛（量比 / 价格 / 市值）…", "cyn"))
-        uni = screen_universe(q, CFG["universe_cap"])
-        print(f"      量比 ≥ {CFG['min_volume_ratio']} 的有 {len(uni)} 只")
+        if full:
+            print(_c("\n[1/4] 取全市场普通股（不预筛，按成交额排名必须全覆盖）…", "cyn"))
+            uni = full_universe(q)
+            print(f"      {len(uni)} 只，约需 {len(uni)//200 + 1} 次快照调用")
+        else:
+            print(_c("\n[1/4] 服务端粗筛（量比 / 价格 / 市值）…", "cyn"))
+            uni = screen_universe(q, CFG["universe_cap"])
+            print(f"      量比 ≥ {CFG['min_volume_ratio']} 的有 {len(uni)} 只")
+            if uni.empty:
+                return pd.DataFrame()
+            basic = us_common_stocks(q)
+            common = set(basic[basic["exchange_type"].isin(
+                {"US_NASDAQ", "US_NYSE", "US_AMEX", "US_NYSE_AMERICAN", "US_ARCA"})]["code"])
+            uni = uni[uni["code"].isin(common)]
+            print(f"      剔除 ETF / 权证 / 粉单后 {len(uni)} 只")
         if uni.empty:
             return pd.DataFrame()
-
-        basic = us_common_stocks(q)
-        common = set(basic[basic["exchange_type"].isin(
-            {"US_NASDAQ", "US_NYSE", "US_AMEX", "US_NYSE_AMERICAN", "US_ARCA"})]["code"])
-        uni = uni[uni["code"].isin(common)]
-        print(f"      剔除 ETF / 权证 / 粉单后 {len(uni)} 只")
 
         print(_c("[2/4] 拉快照（涨幅 / VWAP / 日内位置 / 买卖盘）…", "cyn"))
         snap = snapshots(q, uni["code"].tolist())
@@ -242,17 +276,27 @@ def run(top: int = 15, use_capital: bool = True, use_news: bool = False,
 
         # --- 硬门槛：动量和买量必须"同时"成立 ---
         before = len(w)
+        # 涨幅上限是个会静默吞掉当日最大成交额个股的门槛，必须显式报出来
+        hot = w[(w["change_pct"] > CFG["max_change"])
+                & (w["turnover"] >= CFG["min_turnover"])]
+        excluded_hot = [(r["code"].split(".")[-1], r["change_pct"])
+                        for _, r in hot.sort_values("turnover", ascending=False).iterrows()]
         w = w[
             (w["change_pct"] >= CFG["min_change"])
             & (w["change_pct"] <= CFG["max_change"])
             & (w["turnover"] >= CFG["min_turnover"])
-            & (w["volume_ratio"] >= CFG["min_volume_ratio"])
+            & (w["volume_ratio"] >= (0.0 if full else CFG["min_volume_ratio"]))
             & (w["vwap_premium"] > CFG["min_vwap_premium"])
             & (w["range_pos"] >= CFG["min_range_pos"])
         ].copy()
         print(f"      过双升门槛 {len(w)} / {before} "
-              f"(涨幅≥{CFG['min_change']}% 且 站上VWAP 且 日内位置≥{CFG['min_range_pos']:.0%} "
-              f"且 量比≥{CFG['min_volume_ratio']} 且 成交额≥${CFG['min_turnover']/1e6:.0f}M)")
+              f"({CFG['min_change']}%≤涨幅≤{CFG['max_change']}% 且 站上VWAP 且 "
+              f"日内位置≥{CFG['min_range_pos']:.0%} 且 量比≥{CFG['min_volume_ratio']} "
+              f"且 成交额≥${CFG['min_turnover']/1e6:.0f}M)")
+        if len(excluded_hot):
+            names = ", ".join(f"{c}({p:+.0f}%)" for c, p in excluded_hot[:5])
+            print(_c(f"      注意：{len(excluded_hot)} 只因涨幅 >{CFG['max_change']}% 被剔除: {names}"
+                     f"{' …' if len(excluded_hot) > 5 else ''}  —— 用 --max-change 放开", "yel"))
         if w.empty:
             return pd.DataFrame()
 
@@ -269,10 +313,11 @@ def run(top: int = 15, use_capital: bool = True, use_news: bool = False,
         if split_cap is not None:
             line = split_cap * 1e9
             w["bucket"] = np.where(w["market_cap"] >= line, "大市值", "小市值")
+            presel, _, label = RANK_KEYS[rank_by]
             w = (w.groupby("bucket", group_keys=False)
-                   .apply(lambda g: g.sort_values("turnover", ascending=False).head(per_bucket))
+                   .apply(lambda g: g.sort_values(presel, ascending=False).head(per_bucket))
                    .reset_index(drop=True))
-            print(f"      分桶后 {len(w)} 只（分界 ${split_cap:.0f}B，各取成交额前 {per_bucket}）")
+            print(f"      分桶后 {len(w)} 只（分界 ${split_cap:.0f}B，各取{label}前 {per_bucket}）")
 
         if use_capital:
             head = w if split_cap is not None else w.head(CFG["capital_top_n"])
@@ -315,7 +360,8 @@ def run(top: int = 15, use_capital: bool = True, use_news: bool = False,
         w["both_rising"] = True
 
     if split_cap is not None:
-        w = w.sort_values(["bucket", "turnover"], ascending=[True, False]).reset_index(drop=True)
+        _, final_key, _ = RANK_KEYS[rank_by]
+        w = w.sort_values(["bucket", final_key], ascending=[True, False]).reset_index(drop=True)
     else:
         w = w.sort_values(["both_rising", "score"], ascending=[False, False]).reset_index(drop=True)
         w = w.head(top)
@@ -328,6 +374,17 @@ def run(top: int = 15, use_capital: bool = True, use_news: bool = False,
         w["catalyst_label"] = [cats[c].label_for("long") if c in cats else "none"
                                for c in w["code"]]
         w["catalyst_evidence"] = [cats[c].evidence if c in cats else [] for c in w["code"]]
+
+    if use_odte and not w.empty:
+        print(_c(f"[6/6] 查 0DTE 期权到期日（{len(w)} 只）…", "cyn"))
+        with quote_ctx() as q:
+            target = target_0dte_date(q)
+            st = zero_dte_status(q, w["code"].tolist(), target) if target else {}
+        w.attrs["odte_target"] = target
+        w["has_options"] = [st.get(c, {}).get("has_options", False) for c in w["code"]]
+        w["has_0dte"] = [st.get(c, {}).get("has_0dte", False) for c in w["code"]]
+        w["nearest_expiry"] = [st.get(c, {}).get("nearest") for c in w["code"]]
+        w["dte"] = [st.get(c, {}).get("dte") for c in w["code"]]
 
     w.attrs["session"] = sess
     return w
@@ -403,18 +460,34 @@ def _money(v) -> str:
     return f"{v:.0f}"
 
 
-def print_buckets(df: pd.DataFrame, show_news: bool = False) -> None:
-    """按市值分组输出，组内按今日成交额降序。"""
+def _odte_cell(r) -> str:
+    """0DTE 一列：有当日到期 / 有期权但最近到期还有 N 天 / 没有期权。"""
+    if "has_0dte" not in r.index:
+        return ""
+    if not r.get("has_options"):
+        return _c("无期权", "dim")
+    if r.get("has_0dte"):
+        return _c("✓ 0DTE", "grn")
+    d = r.get("dte")
+    return _c(f"最近+{int(d)}d" if pd.notna(d) else "—", "dim")
+
+
+def print_buckets(df: pd.DataFrame, show_news: bool = False,
+                  rank_label: str = "今日成交额") -> None:
+    """按市值分组输出，组内按指定键降序。"""
     if df.empty:
         print(_c("\n没有标的通过动量门槛。", "yel"))
         return
+    show_odte = "has_0dte" in df.columns
     header = (lj("#", 4) + lj("代码", 10) + lj("名称", 20) + rj("现价", 9)
               + rj("涨幅", 8) + rj("成交额", 10) + rj("量比", 7) + rj("离VWAP", 8)
               + rj("日内位", 7) + rj("市值", 9) + rj("主力净占", 9)
               + rj("30m流入", 9) + rj("评分", 7))
+    if show_odte:
+        header += rj("0DTE", 10)
     if show_news:
         header += "  " + lj("催化剂", 18)
-    width = 126 + (18 if show_news else 0)
+    width = 126 + (10 if show_odte else 0) + (18 if show_news else 0)
 
     for bucket in ("大市值", "小市值"):
         g = df[df["bucket"] == bucket].reset_index(drop=True)
@@ -422,7 +495,7 @@ def print_buckets(df: pd.DataFrame, show_news: bool = False) -> None:
             continue
         line = CFG["cap_split_b"]
         desc = f"≥ ${line:.0f}B" if bucket == "大市值" else f"< ${line:.0f}B"
-        print(_c(f"\n{bucket}（{desc}）· 按今日成交额排序", "bold"))
+        print(_c(f"\n{bucket}（{desc}）· 按{rank_label}排序", "bold"))
         print(_c(header, "bold"))
         print(_c("─" * width, "dim"))
         for i, r in g.iterrows():
@@ -442,6 +515,8 @@ def print_buckets(df: pd.DataFrame, show_news: bool = False) -> None:
                    + rj(_money(r["market_cap"]), 9)
                    + rj(_c(mn, mn_c), 9) + rj(_c(fs, fs_c), 9)
                    + rj(_c(f"{r['score']:.1f}", sc_c), 7))
+            if show_odte:
+                row += rj(_odte_cell(r), 10)
             if show_news:
                 row += "  " + lj(trunc(r.get("catalyst_kind", ""), 16), 18)
             mnr = r.get("main_net_ratio")
@@ -451,9 +526,18 @@ def print_buckets(df: pd.DataFrame, show_news: bool = False) -> None:
                 row += _c(" ·流入放缓", "yel")
             print(row)
         print(_c("─" * width, "dim"))
-    print(_c("门槛：涨幅≥2% 且 站上VWAP 且 日内位置≥55% 且 量比≥1.3 且 成交额≥$5M", "dim"))
+    vr = "" if _FULL_MODE[0] else f" 且 量比≥{CFG['min_volume_ratio']}"
+    print(_c(f"门槛：{CFG['min_change']}%≤涨幅≤{CFG['max_change']}% 且 站上VWAP 且 "
+             f"日内位置≥{CFG['min_range_pos']:.0%}{vr} 且 成交额≥${CFG['min_turnover']/1e6:.0f}M"
+             + ("（全市场模式，量比不设门槛 —— 权重股量比常年 <1.3）" if _FULL_MODE[0] else ""), "dim"))
     print(_c("↓大单出货 = 主力净占 ≤ -5%（真在卖）  ·流入放缓 = 近30分钟净流入转负", "dim"))
     print(_c("主力净占在 ±5% 内视为噪声，不作方向判断", "dim"))
+    if "has_0dte" in df.columns:
+        tgt = df.attrs.get("odte_target")
+        _when = "今天" if session_label() in ("premarket", "regular") else "下一个交易日"
+        print(_c(f"0DTE 指 {tgt} 当天到期的期权（{_when}）。"
+                 f"单票到期日已扩到周一/三/五，但多数中小盘仍是仅周五 —— 逐只实测，不靠惯例",
+                 "dim"))
 
 
 def main(argv=None) -> int:
@@ -462,14 +546,23 @@ def main(argv=None) -> int:
     p.add_argument("--min-change", type=float, help="今日涨幅下限 %%")
     p.add_argument("--min-volume-ratio", type=float, help="量比下限")
     p.add_argument("--min-turnover", type=float, help="今日成交额下限（美元）")
+    p.add_argument("--max-change", type=float,
+                   help="今日涨幅上限 %%（默认 60，防止追已走完的行情）。"
+                        "按成交额找票时建议放开 —— 当日成交额最大的常常就是极端票")
     p.add_argument("--fast", action="store_true", help="跳过资金流查询")
     p.add_argument("--news", action="store_true", help="附带催化剂查询（SEC 8-K + 新闻）")
     p.add_argument("--split-cap", type=float, nargs="?", const=10.0,
                    help="按市值分大/小两组，各取成交额前 N（默认分界 $10B）")
     p.add_argument("--per-bucket", type=int, default=7, help="每组取几只")
+    p.add_argument("--full", action="store_true",
+                   help="快照全市场再排名（按成交额选股必须用，否则会漏掉量比正常的权重股）")
+    p.add_argument("--rank-by", choices=["score", "turnover", "change"], default="score",
+                   help="组内排序键：score=动量×买量评分(默认) / turnover=成交额 / change=涨幅")
+    p.add_argument("--odte", action="store_true",
+                   help="查每只票下一个交易日有没有 0DTE 期权")
     a = p.parse_args(argv)
     for k, v in (("min_change", a.min_change), ("min_volume_ratio", a.min_volume_ratio),
-                 ("min_turnover", a.min_turnover)):
+                 ("min_turnover", a.min_turnover), ("max_change", a.max_change)):
         if v is not None:
             CFG[k] = v
 
@@ -477,14 +570,16 @@ def main(argv=None) -> int:
     note = {"regular": _c("✓ 盘中，数据实时", "grn"),
             "premarket": _c("⚠ 盘前 —— 日内字段尚未开始累积，建议用 premkt.scan", "yel"),
             "afterhours": _c("⚠ 盘后 —— 日内字段停在收盘值", "yel"),
-            "overnight": _c("⚠ 夜盘 —— 日内字段是上一个交易日的", "red"),
+            "overnight": _c("夜盘时段 —— 日内字段是最近一个已收盘交易日的完整数据（可用于当日复盘）", "yel"),
             "closed": _c("⚠ 休市 —— 日内字段停留在最近一个交易日", "yel")}[sess]
     print(_c(f"\n盘中动量+买量双升  {now_et():%Y-%m-%d %H:%M ET}  ", "bold") + note)
 
     df = run(top=a.top, use_capital=not a.fast, use_news=a.news,
-             split_cap=a.split_cap, per_bucket=a.per_bucket)
+             split_cap=a.split_cap, per_bucket=a.per_bucket,
+             full=a.full or a.split_cap is not None,
+             rank_by=a.rank_by, use_odte=a.odte)
     if a.split_cap is not None:
-        print_buckets(df, show_news=a.news)
+        print_buckets(df, show_news=a.news, rank_label=RANK_KEYS[a.rank_by][2])
     else:
         print_table(df, show_news=a.news)
     return 0

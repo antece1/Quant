@@ -1,0 +1,68 @@
+==================================================================
+[2026-09-04 06:32:27 PDT] run.sh dual 
+[1m
+premkt 部署自检   2026-09-04 09:32:28 Fri ET[0m
+[32m  ✓ [0mOpenD 进程在跑 (pid 1428)
+[32m  ✓ [0m127.0.0.1:11111 可连接
+2026-09-04 06:32:28,388 | 42675 | 8454889856 | [open_context_base.py:411] _init_connect_sync: New connect ready: conn=7501633283476858770(1) context=<futu.quote.open_quote_context.OpenQuoteContext object at 0x16c9809b0>
+[32m  ✓ [0m连接握手 0.00s   market_us=AFTERNOON
+[32m  ✓ [0m行情已登录   交易登录=True
+[32m  ✓ [0m订阅额度 剩余 100/100，期权 20/20
+[32m  ✓ [0m快照可用   US.SPY = 772.56   更新于 2026-09-04 09:32:27
+[32m  ✓ [0m数据新鲜度校验通过（prev_close 对齐 2026-09-03 收盘）
+[32m  ✓ [0m时段 regular：盘中 —— 全部工具可用
+[32m
+就绪。[0m
+2026-09-04 06:32:28,610 | 42675 | 6388609024 | [open_context_base.py:521] on_disconnect: Disconnected: conn=0(1) reason=CallClose
+[1m
+动量+波动双口径  2026-09-04 09:32 ET  [0m[32m✓ 盘中，数据实时[0m
+[2m  口径: 盘前（开盘不足 20 分钟，日内字段尚未累积 —— 自动回退到盘前口径）[0m
+2026-09-04 06:32:29,477 | 42677 | 8454889856 | [open_context_base.py:411] _init_connect_sync: New connect ready: conn=7501633288044265931(1) context=<futu.quote.open_quote_context.OpenQuoteContext object at 0x16ff98440>
+/Users/antaiwei/Claude Code/premkt/dual.py:297: DeprecationWarning: DataFrameGroupBy.apply operated on the grouping columns. This behavior is deprecated, and in a future version of pandas the grouping columns will be excluded from the operation. Either pass `include_groups=False` to exclude the groupings or explicitly select the grouping columns after groupby to silence this warning.
+  .apply(lambda g: g.sort_values("prelim", ascending=False)
+[36m
+[1/5] 全市场快照 …[0m
+      过门槛 39 / 3712  [盘前口径] (涨幅≥2.0% 且 振幅≥0.4% 且 区间位置≥50% 且 成交额≥$0.50M)
+      分桶预选 大25 / 小14
+[36m[2/5] 拉 39 只日线（ATR% / 已实现波动率）…[0m
+[36m[3/5] 大市值查期权（0DTE 目标日 2026-09-04）…[0m
+[36m[4/5] 大市值打分（动量 × 波动 × 期权可交易性）…[0m
+[36m[5/5] 小市值打分（动量 × 波动 × 逼空燃料）…[0m
+[1m
+大市值 ≥ $10B · 做期权口径（动量 × 波动 × 期权可交易性）[0m
+[1m#   代码      名称                     现价    涨幅   振幅   ATR%     RV     IV  IV/RV    0DTE      到期   ATM量  量/持仓   点差   评分[0m
+[2m──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+1   US.MRNA   Moderna                153.56   [32m+3.1%[0m   6.0%  14.5%    384    181   [32m0.47[0m       [32m✓[0m     09-04     169     [2m0.2x[0m    34%   [33m51.8[0m
+2   US.MP     MP Materials            56.85   [32m+5.7%[0m   5.8%   5.9%     64     70   [33m1.08[0m       [32m✓[0m     09-04     106     [2m0.1x[0m    29%   [33m51.5[0m
+3   US.SMTC   Semtech                138.71   [32m+2.4%[0m   3.7%   7.5%     93     76   [32m0.81[0m       [2m✗[0m     09-18       0      [2mn/a[0m    25%   [33m34.7[0m
+4   US.ORCL   Oracle                 159.62   [32m+3.6%[0m   4.1%   3.9%     50    100   [31m1.98[0m       [32m✓[0m     09-04    3.2K     [2m0.2x[0m     6%   [33m34.7[0m
+5   US.FN     Fabrinet               402.98   [32m+2.0%[0m   2.4%   6.8%     92     60   [32m0.65[0m       [2m✗[0m     09-18       5     [2m0.0x[0m    25%   [33m34.6[0m
+6   US.SNDK   SanDisk               1591.94   [32m+2.4%[0m   3.0%   6.3%     81    155   [31m1.92[0m       [32m✓[0m     09-04     133     [2m0.3x[0m     4%   [33m31.8[0m
+7   US.TTMI   TTM Technologies       118.66   [32m+2.8%[0m   4.3%   6.5%     73     66   [32m0.90[0m       [2m✗[0m     09-18       0      [2mn/a[0m    34%   [33m30.4[0m
+8   US.STRL   Sterling Infrastru     476.71   [32m+3.6%[0m   4.1%   5.6%     57     62   [33m1.09[0m       [2m✗[0m     09-18       0      [2mn/a[0m    48%   [33m28.0[0m
+9   US.Q      Qnity Electronics      121.00   [32m+2.1%[0m   1.7%   4.5%     47     52   [33m1.11[0m       [2m✗[0m     09-18       1     [2m0.0x[0m    46%   [33m25.6[0m
+10  US.ARM    Arm Holdings           248.47   [32m+2.4%[0m   2.6%   5.6%     50    110   [31m2.21[0m       [32m✓[0m     09-04     100     [2m0.5x[0m    17%   [33m25.3[0m
+[2m──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[2mRV=20日已实现波动率(年化%)  IV=最近到期 ATM CALL 隐波  IV/RV<1 = 期权比这只票真实波动便宜，买方占优[0m
+[2m量/持仓 = 当日成交 / 存量持仓，≥5x 说明当天在大举建新仓（异动资金信号，不是流动性指标）[0m
+[1m
+小市值 < $10B · 做 squeeze 口径（动量 × 波动 × 逼空燃料）[0m
+[1m#   代码      名称                     现价    涨幅   振幅   ATR%     RV    市值   流通盘  换手倍数  逼空分   评分[0m
+[2m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+1   US.WETO   Wetour Robotics          4.13  [32m+28.3%[0m  29.5% 202.8%    674    4.0M   914.8K     [32m4.48x[0m    1.00   [32m73.7[0m
+2   US.AOUT   American Outdoor B      12.92  [32m+29.1%[0m   8.0%   5.9%    115  166.2M    11.1M     [2m0.01x[0m    0.38   [32m57.5[0m
+3   US.ANDG   Andersen Group          58.83   [32m+2.4%[0m   3.7%   3.9%     59    1.0B    15.5M     [2m0.03x[0m    0.53   [33m51.8[0m
+4   US.ROOT   Root Inc                56.67   [32m+2.3%[0m   2.9%   4.3%     57  879.2M    12.3M     [2m0.00x[0m    0.38   [33m49.5[0m
+5   US.UMAC   Unusual Machines        25.22   [32m+2.9%[0m   3.7%   8.8%    127    1.3B    47.5M     [2m0.00x[0m    0.27   [33m48.9[0m
+6   US.CRML   Critical Metals          7.82   [32m+6.2%[0m   6.2%   8.9%    124    1.1B    82.5M     [2m0.00x[0m    0.16   [33m48.4[0m
+7   US.PENG   Penguin Solutions       50.03   [32m+2.9%[0m   2.7%   6.2%     66    2.5B    49.6M     [2m0.00x[0m    0.27   [33m48.2[0m
+8   US.RARE   Ultragenyx Pharmac      15.47   [32m+4.2%[0m   3.7%  13.4%    211    1.5B    80.7M     [2m0.00x[0m    0.16   [33m47.8[0m
+9   US.AEHR   Aehr Test Systems       78.55   [32m+3.0%[0m   5.0%  11.1%    119    2.6B    31.3M     [2m0.00x[0m    0.27   [33m45.6[0m
+10  US.FORM   FormFactor              99.63   [32m+3.0%[0m   3.0%   7.2%     76    7.7B    77.4M     [2m0.00x[0m    0.16   [33m41.1[0m
+[2m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[2m换手倍数 = 今日成交量 / 流通股本；≥0.5x 表示半个流通盘一天内易手，浮筹被快速吸收[0m
+[33m注意：futu 的融券可得量(short_available_volume)是港股专用字段，美股全部为空，所以借券难度这一维拿不到 —— 逼空分只由流通盘与换手构成[0m
+[2m
+0DTE 指 2026-09-04 当天到期。单票期权是周一/三/五到期，周二/四只有 SPY/QQQ/IWM 这类每日到期的指数 ETF 有 0DTE。[0m
+2026-09-04 06:35:37,567 | 42677 | 6207647744 | [open_context_base.py:521] on_disconnect: Disconnected: conn=0(1) reason=CallClose
+[2026-09-04 06:35:37] dual 结束 rc=0
