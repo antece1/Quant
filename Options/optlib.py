@@ -15,6 +15,14 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+TOOLS = ROOT / "tools"
+
+# Importing optlib puts the tree on sys.path, so any script in a subfolder can
+# `from moomoo_option_price import ...` without knowing where tools/ lives.
+import sys as _sys
+for _p in (ROOT, TOOLS):
+    if str(_p) not in _sys.path:
+        _sys.path.insert(0, str(_p))
 
 
 def bootstrap() -> None:

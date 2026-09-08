@@ -30,10 +30,23 @@ SCEN = {           # revenue $B, adj EBITDA $B, adj EPS
 STREET_REV, STREET_EPS = 1.940, 3.72
 GUIDE = (1.915, 1.945)
 
+def _book(key, fallback):
+    """真实持仓从 Options/positions/book.json 读 —— 该文件不进版本控制。
+    缺失时回退到 fallback 里的示例数字（编的，不是任何真实仓位）。"""
+    import json, pathlib
+    p = pathlib.Path(__file__).resolve().parents[1] / "Options" / "positions" / "book.json"
+    try:
+        return json.loads(p.read_text())[key]
+    except (OSError, KeyError, ValueError):
+        return fallback
+
 # --- position: 5 legs, entry prices -------------------------------------------
-COST = 4758.0
-LEGS = [("C", 420, 1, "S"), ("C", 470, -1, "S"),
-        ("P", 370, -2, "S"), ("P", 340, 2, "S"), ("C", 600, 1, "F")]
+_B = _book("app_earnings_postmortem", {
+    "cost": 5000.0,
+    "legs": [["C", 420, 1, "S"], ["C", 470, -1, "S"],
+             ["P", 370, -2, "S"], ["P", 340, 2, "S"], ["C", 600, 1, "F"]],
+})
+COST, LEGS = _B["cost"], _B["legs"]
 DTE_SEP_AT_ENTRY, DTE_FEB_AT_ENTRY = 44, 197
 
 

@@ -44,9 +44,18 @@ RFR             = 0.04           # risk-free rate (annual)
 CONTRACTS       = 4              # puts per signal (or size off beta-weighted delta)
 MULT            = 100            # option contract multiplier
 SLIPPAGE_PCT    = 0.05           # haircut on entry premium for spread/slippage (options are wide!)
-# Portfolio overlay: approximate your book as a levered long-SMH exposure.
-# From the sizing calc: raw $delta ~ $104,500 of underlying exposure.
-BOOK_NOTIONAL   = 104_500        # $ of SMH-equivalent long exposure to overlay onto
+def _book(key, fallback):
+    """真实持仓从 Options/positions/book.json 读 —— 该文件不进版本控制。
+    缺失时回退到 fallback 里的示例数字（编的，不是任何真实仓位）。"""
+    import json, pathlib
+    p = pathlib.Path(__file__).resolve().parents[1] / "positions" / "book.json"
+    try:
+        return json.loads(p.read_text())[key]
+    except (OSError, KeyError, ValueError):
+        return fallback
+
+# Portfolio overlay: approximate the book as a levered long-SMH exposure.
+BOOK_NOTIONAL   = _book("smh_put_hedge", {"book_notional": 100_000})["book_notional"]
 # ----------------------------------------------------------------------------
 
 
