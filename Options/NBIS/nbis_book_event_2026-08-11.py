@@ -24,14 +24,24 @@ TODAY = pd.Timestamp("2026-08-11")
 BASE_VOL = 0.993          # fitted in nbis_q2_strategy.py
 DAYS_FWD = 3              # value on 08/14, the session after the print + 2
 
-# from positions/webull_positions_2026-08-03.json (latest capture)
-LEGS = [
-    ("2026-10-16", 270, 1, 1505.00, "margin"),
-    ("2026-11-20", 280, 1, 2795.00, "margin"),
-    ("2027-01-15", 300, 1, 6150.00, "margin"),
-    ("2026-10-16", 270, 1, 1356.00, "roth"),
-]
-NBIG_SH, NBIG_COST = 89, 1317.35     # Leverage Shares 2x long NBIS
+def _book(key, fallback):
+    """真实持仓从 Options/positions/book.json 读 —— 该文件不进版本控制。
+    缺失时回退到 fallback 里的示例数字（编的，不是任何真实仓位）。"""
+    import json, pathlib
+    p = pathlib.Path(__file__).resolve().parents[1] / "positions" / "book.json"
+    try:
+        return json.loads(p.read_text())[key]
+    except (OSError, KeyError, ValueError):
+        return fallback
+
+# leg: (expiry, strike, contracts, cost, account)
+_B = _book("nbis_book_event", {
+    "legs": [["2026-10-16", 250, 1, 2000.00, "taxable"],
+             ["2027-01-15", 300, 1, 3000.00, "taxable"]],
+    "nbig_sh": 50, "nbig_cost": 1000.00,
+})
+LEGS = _B["legs"]
+NBIG_SH, NBIG_COST = _B["nbig_sh"], _B["nbig_cost"]   # Leverage Shares 2x long NBIS
 
 
 def bs_call(S, K, T, r, s):

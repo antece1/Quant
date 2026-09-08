@@ -49,9 +49,20 @@ SEP18 = {
 }
 DTE = {"2026-08-21": 18, "2026-09-18": 46}
 
-# Book being liquidated (Webull marks 2026-08-03)
-BOOK_MV, BOOK_COST = 27419.42, 26938.44
-CASH = 2653.52 + 276.08
+def _book(key, fallback):
+    """真实持仓从 Options/positions/book.json 读 —— 该文件不进版本控制。
+    缺失时回退到 fallback 里的示例数字（编的，不是任何真实仓位）。"""
+    import json, pathlib
+    p = pathlib.Path(__file__).resolve().parents[1] / "positions" / "book.json"
+    try:
+        return json.loads(p.read_text())[key]
+    except (OSError, KeyError, ValueError):
+        return fallback
+
+# Book being liquidated
+_B = _book("put_spread_analysis",
+           {"book_mv": 10000.00, "book_cost": 10000.00, "cash": 1000.00})
+BOOK_MV, BOOK_COST, CASH = _B["book_mv"], _B["book_cost"], _B["cash"]
 
 
 def bs_put(S, K, T, r, sig):

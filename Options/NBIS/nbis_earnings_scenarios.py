@@ -26,22 +26,24 @@ DAYS_FWD = 10                      # snapshot -> day after earnings
 RFR = 0.04
 SPOT = {"NBIS": 212.58, "BE": 218.32, "CRDO": 218.35, "ASX": 36.68}
 
+def _book(key, fallback):
+    """真实持仓从 Options/positions/book.json 读 —— 该文件不进版本控制。
+    缺失时回退到 fallback 里的示例数字（编的，不是任何真实仓位）。"""
+    import json, pathlib
+    p = pathlib.Path(__file__).resolve().parents[1] / "positions" / "book.json"
+    try:
+        return json.loads(p.read_text())[key]
+    except (OSError, KeyError, ValueError):
+        return fallback
+
 # leg: (ticker, strike, dte_at_snapshot, iv_pct, contracts, mark, cost, account)
-OPTIONS = [
-    ("NBIS", 270,  74, 126.363, 1, 30.275, 1505.00, "margin"),
-    ("NBIS", 280, 109, 123.875, 1, 37.300, 2795.00, "margin"),
-    ("NBIS", 300, 165, 118.079, 1, 43.250, 6150.00, "margin"),
-    ("ASX",   45, 165,  81.059, 2,  5.400, 1513.33, "margin"),
-    ("BE",   300, 137, 116.125, 1, 38.750, 4795.00, "margin"),
-    ("CRDO", 340, 165, 105.945, 1, 31.450, 4570.00, "margin"),
-    ("NBIS", 270,  74, 126.363, 1, 30.275, 1356.00, "roth"),
-]
-# leveraged ETFs: (ticker, economic underlying, leverage, shares, mark, cost)
-ETFS = [
-    ("NBIG", "NBIS", 2.0, 89, 18.70, 1317.35),
-    ("CRDU", "CRDO", 2.0, 68, 14.09, 1085.96),
-    ("BEG",  "BE",   2.0, 70, 36.95, 1850.80),
-]
+# leveraged ETF: (ticker, economic underlying, leverage, shares, mark, cost)
+_B = _book("nbis_earnings_scenarios", {
+    "options": [["NBIS", 250, 60, 100.0, 1, 20.000, 2000.00, "taxable"],
+                ["BE",   300, 120, 110.0, 1, 30.000, 3000.00, "taxable"]],
+    "etfs":    [["NBIG", "NBIS", 2.0, 50, 20.00, 1000.00]],
+})
+OPTIONS, ETFS = _B["options"], _B["etfs"]
 BOOK_MV = sum(o[5] * MULT * o[4] for o in OPTIONS) + sum(e[3] * e[4] for e in ETFS)
 BOOK_COST = sum(o[6] for o in OPTIONS) + sum(e[5] for e in ETFS)
 

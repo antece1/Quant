@@ -6,6 +6,8 @@
 # ---- 个人财务数据（最高优先级，泄露不可逆） ----
 Options/positions/*.json
 Options/positions/*.csv
+# 示例账本要入库（数字是编的）；真实的 book.json 由上面那条拦住
+!Options/positions/book.example.json
 premkt/snapshots/
 premkt/logs/
 premkt/alerts.csv
