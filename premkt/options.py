@@ -21,7 +21,10 @@ from futu import RET_OK
 
 from .data import _Throttle, now_et, session_label
 
-_opt_throttle = _Throttle(max_calls=18, window=30.0)
+# get_option_chain 限频 10 次/30 秒（get_option_expiration_date 也走同一档）。
+# 设快了后续调用会直接失败，而失败常被当成"没有期权"静默跳过 —— 实测 MCD
+# 的 6 个 LEAPS 到期日就是这样整体消失的。
+_opt_throttle = _Throttle(max_calls=9, window=30.0)
 
 CALENDAR_PROXY = "US.SPY"
 

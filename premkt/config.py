@@ -136,6 +136,9 @@ HEADLINE_POSITIVE = {
     # 商业进展
     r"\b(contract award|awarded (a )?contract|wins? .{0,20}contract|defense contract)\b": 0.90,
     r"\b(strategic partnership|partners? with|collaboration with|joint venture)\b": 0.65,
+    # "被 X 选中/选用" 是拿下大客户最常见的写法，词典早先只认 partnership 会漏掉
+    # （2026-08-25 实盘：RZLV +21% 靠 "Google Selects Rezolve AI's ... Platform"）
+    r"\b(selected (by|for|to)|selects|chosen (by|for)|chooses|taps|tapped (by|to)|wins? (deal|order|mandate))\b": 0.70,
     r"\b(share repurchase|buyback|stock repurchase program)\b": 0.55,
     # 卖方
     r"\b(upgrade[sd]?|price target raised|raises? price target|initiated .{0,15}(buy|outperform|overweight))\b": 0.50,

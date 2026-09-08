@@ -39,8 +39,11 @@ CFG = dict(
     min_amplitude=2.5,          # 今日振幅下限 —— "波动最大"的入门线
     min_range_pos=0.50,
     split_b=10.0,
-    prelim_per_bucket=25,       # 每组先取多少只去拉 K 线
-    opt_check_n=15,             # 大市值里查期权的只数（每只 3 次调用）
+    # 盘前时段的门槛要单独一套：盘前成交额和振幅天然比盘中小一个量级
+    pre_min_turnover=500_000.0,
+    pre_min_amplitude=0.4,
+    prelim_per_bucket=40,       # 放宽：上一轮 META 在预选阶段就被砍，期权异动信号没机会评估
+    opt_check_n=25,             # 查期权的只数同步放宽
     final_n=10,
 )
 
@@ -66,15 +69,21 @@ def _vol_metrics(k: pd.DataFrame, price: float, today: dt.date) -> dict:
     return out
 
 
-def _vol_score(amplitude: float, atr_pct: float, rvol: float) -> float:
-    """波动分：今日振幅 + ATR% + 已实现波动率，三者都要够大。"""
+def _vol_score(amplitude: float, atr_pct: float, rvol: float,
+               premkt: bool = False) -> float:
+    """波动分：当场振幅 + ATR% + 已实现波动率。
+
+    盘前模式下把权重压到 ATR%/RV 上 —— 盘前区间天然窄且成交稀疏，
+    用它当"波动最大"的主要依据会把真正高波动的票排在后面。
+    """
     parts, wts = [], []
+    amp_w, amp_div = (0.15, 4.0) if premkt else (0.40, 8.0)
     if not math.isnan(amplitude):
-        parts.append(min(1.0, amplitude / 8.0)); wts.append(0.40)
+        parts.append(min(1.0, amplitude / amp_div)); wts.append(amp_w)
     if not math.isnan(atr_pct):
-        parts.append(min(1.0, atr_pct / 6.0)); wts.append(0.35)
+        parts.append(min(1.0, atr_pct / 6.0)); wts.append(0.50 if premkt else 0.35)
     if not math.isnan(rvol):
-        parts.append(min(1.0, rvol / 80.0)); wts.append(0.25)
+        parts.append(min(1.0, rvol / 80.0)); wts.append(0.35 if premkt else 0.25)
     return float(np.average(parts, weights=wts)) if parts else 0.0
 
 
@@ -134,43 +143,90 @@ def option_metrics(q, code: str, target: dt.date, spot: float) -> dict:
     s = snap.iloc[0]
     ask, bid = float(s.get("ask_price") or 0), float(s.get("bid_price") or 0)
     mid = (ask + bid) / 2
-    out.update(strike=float(row["_k"]),
-               iv=float(s.get("option_implied_volatility") or 0) or np.nan,
+    _sp = (ask - bid) / mid * 100 if mid > 0 else np.nan
+    _iv = float(s.get("option_implied_volatility") or 0) or np.nan
+    if not math.isnan(_sp) and _sp > 50:
+        _iv = np.nan          # 点差 >50% 说明一边几乎没报价，IV 不可信
+    out.update(strike=float(row["_k"]), iv=_iv,
                oi=float(s.get("option_open_interest") or 0),
                ovol=float(s.get("volume") or 0),
-               ospread=(ask - bid) / mid * 100 if mid > 0 else np.nan)
+               ospread=_sp)
     return out
 
 
-def _option_adj(m: dict, rvol: float) -> tuple[float, float]:
-    """返回 (期权可交易性调整, IV/RV 比值)。
+def vol_oi_ratio(ovol: float, oi: float) -> float:
+    """当日成交 / 存量持仓。
+
+    这是异动资金信号，不是流动性指标 —— 比值远大于 1 说明当天有大批**新仓**
+    在这个行权价上建立（META 2026-08-28: 成交 17,942 / 持仓 1,095 = 16.4x）。
+    持仓为 0 但成交很大，是当天新挂出的行权价，同样算强信号而非流动性差。
+    """
+    if math.isnan(ovol) or ovol <= 0:
+        return np.nan
+    if math.isnan(oi) or oi <= 0:
+        return 20.0 if ovol >= 500 else np.nan     # 新行权价，按强信号计
+    return ovol / oi
+
+
+def _option_adj(m: dict, rvol: float) -> tuple[float, float, float]:
+    """返回 (期权可交易性调整, IV/RV 比值, 量/持仓比)。
 
     IV/RV < 1 表示期权比这只票真实的波动便宜 —— 买方占优。
+    量/持仓 > 5 表示当天有新仓在大举建立 —— 异动资金信号。
     """
     iv, ratio = m.get("iv", np.nan), np.nan
     if not math.isnan(iv) and not math.isnan(rvol) and rvol > 0:
         ratio = iv / rvol
 
     adj = 1.0
-    if not math.isnan(ratio):
-        # 0.8 以下给满额加成，1.8 以上明显扣分
+    if math.isnan(ratio):
+        # 期权口径下 IV 拿不到（多半是点差过宽、一边没报价）本身就是负面信息
+        adj *= 0.55
+    else:
         adj *= max(0.55, min(1.20, 1.35 - 0.45 * ratio))
+
     oi, ov = m.get("oi", np.nan), m.get("ovol", np.nan)
-    if not math.isnan(oi):
-        adj *= 1.0 if oi >= 1000 else (0.92 if oi >= 200 else 0.78)
+    voi = vol_oi_ratio(ov, oi)
+    # 异动加成：当日新建仓远超存量
+    if not math.isnan(voi):
+        adj *= 1.25 if voi >= 10 else (1.15 if voi >= 5 else (1.06 if voi >= 2 else 1.0))
+    # 绝对成交量仍作流动性下限；持仓为 0 时不再按"流动性差"处罚（见 vol_oi_ratio）
     if not math.isnan(ov):
         adj *= 1.0 if ov >= 500 else (0.93 if ov >= 100 else 0.82)
+    if not math.isnan(oi) and oi > 0:
+        adj *= 1.0 if oi >= 1000 else (0.96 if oi >= 200 else 0.88)
     sp = m.get("ospread", np.nan)
     if not math.isnan(sp):
         adj *= 1.0 if sp <= 5 else (0.9 if sp <= 12 else 0.72)
     if m.get("has_0dte"):
         adj *= 1.10
-    return adj, ratio
+    return adj, ratio, voi
 
 
 # ---------------------------------------------------------------------------
-def run() -> tuple[pd.DataFrame, pd.DataFrame, dt.date]:
+def pick_mode(mode: str = "auto") -> tuple[bool, str]:
+    """决定用盘前字段还是日内字段，返回 (是否盘前口径, 说明)。
+
+    关键防呆：开盘头 20 分钟日内字段几乎是空的（实测 09:31 时 SPY 振幅
+    只有 0.112%），此时按日内口径排"波动最大"完全没有意义 ——
+    自动回退到盘前口径，盘前那一场是完整的。
+    """
+    sess = session_label()
+    if mode == "premarket":
+        return True, "强制盘前口径"
+    if mode == "intraday":
+        return False, "强制日内口径"
+    if sess == "premarket":
+        return True, "盘前时段"
+    if sess == "regular" and now_et().time() < dt.time(9, 50):
+        return True, "开盘不足 20 分钟，日内字段尚未累积 —— 自动回退到盘前口径"
+    return False, f"{sess} 时段"
+
+
+def run(mode: str = "auto") -> tuple[pd.DataFrame, pd.DataFrame, dt.date]:
     today = now_et().date()
+    premkt, why = pick_mode(mode)
+    print(_c(f"  口径: {'盘前' if premkt else '日内'}（{why}）", "dim"))
     with quote_ctx() as q:
         print(_c("\n[1/5] 全市场快照 …", "cyn"))
         uni = full_universe(q)
@@ -179,31 +235,58 @@ def run() -> tuple[pd.DataFrame, pd.DataFrame, dt.date]:
 
         rows = []
         for _, r in d.iterrows():
-            last = float(r.get("last_price") or 0); prev = float(r.get("prev_close_price") or 0)
-            hi = float(r.get("high_price") or 0); lo = float(r.get("low_price") or 0)
-            vwap = float(r.get("avg_price") or 0); to = float(r.get("turnover") or 0)
             mc = float(r.get("total_market_val") or 0)
-            if not (prev > 0 and last > 0 and hi > lo and vwap > 0 and mc > 0):
+            if mc <= 0:
+                continue
+            if premkt:
+                # 盘前：必须用 API 自带的 pre_change_rate。
+                # prev_close_price 在盘前会滞后一个交易日（实测 8/28 盘前它给的是
+                # 周三收盘），自己用 pre_price/prev_close_price 算会得到完全错误的涨幅。
+                px = float(r.get("pre_price") or 0)
+                hi = float(r.get("pre_high_price") or 0)
+                lo = float(r.get("pre_low_price") or 0)
+                to = float(r.get("pre_turnover") or 0)
+                vol = float(r.get("pre_volume") or 0)
+                chg = float(r.get("pre_change_rate") or 0)
+                amp = float(r.get("pre_amplitude") or 0)
+                vwap_prem = 0.0            # 盘前没有 VWAP
+            else:
+                px = float(r.get("last_price") or 0)
+                prev = float(r.get("prev_close_price") or 0)
+                hi = float(r.get("high_price") or 0)
+                lo = float(r.get("low_price") or 0)
+                vwap = float(r.get("avg_price") or 0)
+                to = float(r.get("turnover") or 0)
+                vol = float(r.get("volume") or 0)
+                if not (prev > 0 and vwap > 0):
+                    continue
+                chg = (px / prev - 1) * 100
+                amp = float(r.get("amplitude") or 0)
+                vwap_prem = (px / vwap - 1) * 100
+            if not (px > 0 and hi > lo):
                 continue
             rows.append(dict(
-                code=r["code"], name=r.get("name", ""), price=last,
-                change_pct=(last / prev - 1) * 100, turnover=to, market_cap=mc,
-                amplitude=float(r.get("amplitude") or 0),
-                range_pos=(last - lo) / (hi - lo),
-                vwap_premium=(last / vwap - 1) * 100,
-                volume=float(r.get("volume") or 0),
+                code=r["code"], name=r.get("name", ""), price=px,
+                change_pct=chg, turnover=to, market_cap=mc, amplitude=amp,
+                range_pos=(px - lo) / (hi - lo), vwap_premium=vwap_prem,
+                volume=vol,
                 float_shares=float(r.get("outstanding_shares") or np.nan),
-                short_avail=float(r.get("short_available_volume") or np.nan),
-                enable_short=bool(r.get("enable_short_sell", True)),
             ))
         w = pd.DataFrame(rows)
         n0 = len(w)
-        w = w[(w.price >= CFG["min_price"]) & (w.turnover >= CFG["min_turnover"])
-              & (w.change_pct >= CFG["min_change"]) & (w.amplitude >= CFG["min_amplitude"])
-              & (w.vwap_premium > 0) & (w.range_pos >= CFG["min_range_pos"])].copy()
-        print(f"      过门槛 {len(w)} / {n0} "
-              f"(涨幅≥{CFG['min_change']}% 且 振幅≥{CFG['min_amplitude']}% 且 站上VWAP "
-              f"且 日内位置≥{CFG['min_range_pos']:.0%} 且 成交额≥${CFG['min_turnover']/1e6:.0f}M)")
+        min_to = CFG["pre_min_turnover"] if premkt else CFG["min_turnover"]
+        min_amp = CFG["pre_min_amplitude"] if premkt else CFG["min_amplitude"]
+        cond = ((w.price >= CFG["min_price"]) & (w.turnover >= min_to)
+                & (w.change_pct >= CFG["min_change"]) & (w.amplitude >= min_amp)
+                & (w.range_pos >= CFG["min_range_pos"]))
+        if not premkt:
+            cond &= (w.vwap_premium > 0)
+        w = w[cond].copy()
+        tag = "盘前" if premkt else "日内"
+        print(f"      过门槛 {len(w)} / {n0}  [{tag}口径] "
+              f"(涨幅≥{CFG['min_change']}% 且 振幅≥{min_amp}% "
+              f"{'' if premkt else '且 站上VWAP '}且 区间位置≥{CFG['min_range_pos']:.0%} "
+              f"且 成交额≥${min_to/1e6:.2f}M)")
         if w.empty:
             return pd.DataFrame(), pd.DataFrame(), today
 
@@ -220,7 +303,8 @@ def run() -> tuple[pd.DataFrame, pd.DataFrame, dt.date]:
         kl = daily_klines(q, pre["code"].tolist())
         vm = [_vol_metrics(kl.get(c), p, today) for c, p in zip(pre["code"], pre["price"])]
         pre = pd.concat([pre.reset_index(drop=True), pd.DataFrame(vm)], axis=1)
-        pre["vol_score"] = [_vol_score(r.amplitude, r.atr_pct, r.rvol) for r in pre.itertuples()]
+        pre["vol_score"] = [_vol_score(r.amplitude, r.atr_pct, r.rvol, premkt)
+                            for r in pre.itertuples()]
         pre["mom_score"] = [_momentum_score(r.change_pct, r.range_pos, r.vwap_premium)
                             for r in pre.itertuples()]
 
@@ -232,14 +316,15 @@ def run() -> tuple[pd.DataFrame, pd.DataFrame, dt.date]:
         large = pd.concat([large.reset_index(drop=True), pd.DataFrame(om)], axis=1)
 
     print(_c("[4/5] 大市值打分（动量 × 波动 × 期权可交易性）…", "cyn"))
-    adjs, ratios = [], []
+    adjs, ratios, vois = [], [], []
     for r in large.itertuples():
-        a, ratio = _option_adj(
+        a, ratio, voi = _option_adj(
             dict(iv=r.iv, oi=r.oi, ovol=r.ovol, ospread=r.ospread, has_0dte=r.has_0dte),
             r.rvol)
-        adjs.append(a); ratios.append(ratio)
+        adjs.append(a); ratios.append(ratio); vois.append(voi)
     large["opt_adj"] = adjs
     large["iv_rv"] = ratios
+    large["vol_oi"] = vois
     large["score"] = [round(100 * math.sqrt(max(m, 0) * max(v, 0)) * a, 1)
                       for m, v, a in zip(large.mom_score, large.vol_score, large.opt_adj)]
     large = large.sort_values("score", ascending=False).head(CFG["final_n"]).reset_index(drop=True)
@@ -272,9 +357,9 @@ def print_large(df: pd.DataFrame, target: dt.date) -> None:
         print(_c("  （无）", "yel")); return
     print(_c(lj("#", 4) + lj("代码", 10) + lj("名称", 20) + rj("现价", 9) + rj("涨幅", 8)
              + rj("振幅", 7) + rj("ATR%", 7) + rj("RV", 7) + rj("IV", 7) + rj("IV/RV", 7)
-             + rj("0DTE", 8) + rj("到期", 10) + rj("ATM持仓", 9) + rj("点差", 7)
-             + rj("评分", 7), "bold"))
-    print(_c("─" * 134, "dim"))
+             + rj("0DTE", 8) + rj("到期", 10) + rj("ATM量", 8) + rj("量/持仓", 9)
+             + rj("点差", 7) + rj("评分", 7), "bold"))
+    print(_c("─" * 142, "dim"))
     for i, r in df.iterrows():
         ratio = r["iv_rv"]
         rc = "grn" if (pd.notna(ratio) and ratio < 1.0) else ("yel" if pd.notna(ratio) and ratio < 1.5 else "red")
@@ -287,12 +372,15 @@ def print_large(df: pd.DataFrame, target: dt.date) -> None:
               + rj("n/a" if pd.isna(r["iv"]) else f"{r['iv']:.0f}", 7)
               + rj(_c("n/a" if pd.isna(ratio) else f"{ratio:.2f}", rc), 7)
               + rj(od, 8) + rj(str(r["near_exp"] or "—")[5:], 10)
-              + rj(_m(r["oi"]), 9)
+              + rj(_m(r["ovol"]), 8)
+              + rj(_c("n/a" if pd.isna(r["vol_oi"]) else f"{r['vol_oi']:.1f}x",
+                      "grn" if (pd.notna(r["vol_oi"]) and r["vol_oi"] >= 5) else "dim"), 9)
               + rj("n/a" if pd.isna(r["ospread"]) else f"{r['ospread']:.0f}%", 7)
               + rj(_c(f"{r['score']:.1f}", "grn" if r["score"] >= 55 else "yel"), 7))
-    print(_c("─" * 134, "dim"))
+    print(_c("─" * 142, "dim"))
     print(_c("RV=20日已实现波动率(年化%)  IV=最近到期 ATM CALL 隐波  "
              "IV/RV<1 = 期权比这只票真实波动便宜，买方占优", "dim"))
+    print(_c("量/持仓 = 当日成交 / 存量持仓，≥5x 说明当天在大举建新仓（异动资金信号，不是流动性指标）", "dim"))
 
 
 def print_small(df: pd.DataFrame) -> None:
@@ -324,15 +412,18 @@ def print_small(df: pd.DataFrame) -> None:
 
 
 def main(argv=None) -> int:
-    argparse.ArgumentParser(description="动量+波动双口径扫描").parse_args(argv)
+    ap = argparse.ArgumentParser(description="动量+波动双口径扫描")
+    ap.add_argument("--mode", choices=["auto", "premarket", "intraday"], default="auto",
+                    help="数据口径。auto 会在开盘头 20 分钟自动用盘前字段")
+    a = ap.parse_args(argv)
     sess = session_label()
     note = {"regular": "✓ 盘中，数据实时",
-            "premarket": "⚠ 盘前 —— 日内字段尚未累积",
+            "premarket": "✓ 盘前口径 —— 用 pre_* 字段（日内字段此时仍是上一场的）",
             "afterhours": "✓ 盘后 —— 日内字段是今日完整收盘数据",
             "overnight": "✓ 夜盘 —— 日内字段是最近一个已收盘交易日的完整数据",
             "closed": "⚠ 休市 —— 日内字段停留在最近一个交易日"}[sess]
     print(_c(f"\n动量+波动双口径  {now_et():%Y-%m-%d %H:%M ET}  ", "bold") + _c(note, "grn"))
-    large, small, target = run()
+    large, small, target = run(a.mode)
     print_large(large, target)
     print_small(small)
     print(_c(f"\n0DTE 指 {target} 当天到期。单票期权是周一/三/五到期，"

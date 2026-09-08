@@ -1,0 +1,44 @@
+# ============================================================
+# 铁律：个人财务数据、凭证、缓存、第三方二进制，永不进版本控制。
+# 决定人：Michael（2026-09-08）。改这一节前先问人，不要由 AI 自行放宽。
+# ============================================================
+
+# ---- 个人财务数据（最高优先级，泄露不可逆） ----
+Options/positions/*.json
+Options/positions/*.csv
+premkt/snapshots/
+premkt/logs/
+premkt/alerts.csv
+earnings_board/
+
+# ---- 凭证 / 环境 ----
+.env
+.env.*
+*.key
+*.pem
+credentials*
+secrets*
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# ---- 缓存 / 中间产物 ----
+premkt/cache/
+market_cockpit/.cache/
+Options/backtest/optbt/_cache/
+
+# ---- 第三方二进制 / 机器本地物 ----
+moomoo_OpenD_*_Mac/
+moomoo_OpenD
+.DS_Store
+
+# ---- exchange 例外：空目录占位必须保留 ----
+!exchange/from-michael/.gitkeep
+!exchange/from-jose/.gitkeep
+!external/.gitkeep
+
+# ---- Claude Code 机器本地设置（含个人邮箱与本机路径白名单） ----
+.claude/settings.local.json

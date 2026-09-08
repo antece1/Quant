@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.premkt.scan</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/antaiwei/Claude Code/premkt/run.sh</string>
+    <string>scan</string>
+    <string>--save</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict><key>REQUIRE_SESSION</key><string>premarket</string></dict>
+  <!-- 本机是 PT，launchd 用本地时间。05:15 PT = 08:15 ET，盘前流动性起来之后 -->
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>5</integer><key>Minute</key><integer>15</integer></dict>
+    <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>5</integer><key>Minute</key><integer>15</integer></dict>
+    <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>5</integer><key>Minute</key><integer>15</integer></dict>
+    <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>5</integer><key>Minute</key><integer>15</integer></dict>
+    <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>5</integer><key>Minute</key><integer>15</integer></dict>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/antaiwei/Claude Code</string>
+  <key>StandardOutPath</key><string>/Users/antaiwei/Claude Code/premkt/logs/launchd_scan.out</string>
+  <key>StandardErrorPath</key><string>/Users/antaiwei/Claude Code/premkt/logs/launchd_scan.err</string>
+  <key>RunAtLoad</key><false/>
+</dict>
+</plist>

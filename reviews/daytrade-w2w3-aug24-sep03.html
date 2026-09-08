@@ -1,0 +1,814 @@
+<title>142 次进出</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600&display=swap">
+<style>
+:root{
+  --ground:#FBFAF7; --surface:#FFFFFF; --panel:#F3F1EC; --sunk:#EFEDE6;
+  --ink:#1A1916; --ink2:#3C3A34; --muted:#6E6A61; --faint:#918C81;
+  --rule:#DEDAD1; --rule2:#EAE6DD;
+  --gain:#0B7A5C; --loss:#B2332A;
+  --gain-wash:rgba(11,122,92,.10); --loss-wash:rgba(178,51,42,.10);
+  --shadow:0 1px 2px rgba(26,25,22,.05);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#151513; --surface:#1D1D1A; --panel:#232320; --sunk:#1A1A18;
+    --ink:#EDEAE3; --ink2:#D2CEC5; --muted:#969186; --faint:#7A756B;
+    --rule:#33322D; --rule2:#282723;
+    --gain:#1E9E8B; --loss:#CF6A58;
+    --gain-wash:rgba(30,158,139,.13); --loss-wash:rgba(207,106,88,.13);
+    --shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#151513; --surface:#1D1D1A; --panel:#232320; --sunk:#1A1A18;
+  --ink:#EDEAE3; --ink2:#D2CEC5; --muted:#969186; --faint:#7A756B;
+  --rule:#33322D; --rule2:#282723;
+  --gain:#1E9E8B; --loss:#CF6A58;
+  --gain-wash:rgba(30,158,139,.13); --loss-wash:rgba(207,106,88,.13);
+  --shadow:0 1px 2px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font:400 16px/1.75 "IBM Plex Sans","Noto Sans SC",-apple-system,BlinkMacSystemFont,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1000px;margin:0 auto;padding:0 28px 96px}
+h1,h2,h3{font-family:"Zilla Slab","Noto Serif SC",Georgia,serif;text-wrap:balance;margin:0}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,monospace;font-variant-numeric:tabular-nums}
+.num{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:500}
+.pos{color:var(--gain)} .neg{color:var(--loss)}
+
+/* ---------- masthead ---------- */
+header{padding:56px 0 34px;border-bottom:1px solid var(--ink);}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(40px,7vw,68px);font-weight:600;line-height:1.02;letter-spacing:-.015em;margin:18px 0 14px}
+.dek{font-size:17px;color:var(--ink2);max-width:62ch;line-height:1.7}
+.tape{display:flex;align-items:flex-end;gap:1px;height:26px;margin:26px 0 0;overflow:hidden}
+.tape i{display:block;width:2px;background:var(--rule);flex:0 0 auto}
+.tape i.g{background:var(--gain)} .tape i.r{background:var(--loss)}
+.tape-cap{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--faint);letter-spacing:.06em;margin-top:8px}
+
+/* ---------- sections ---------- */
+section{padding:52px 0 0}
+.shead{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--rule);padding-bottom:10px;margin-bottom:26px}
+.shead .k{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.shead h2{font-size:26px;font-weight:600;letter-spacing:-.01em}
+p{margin:0 0 18px;max-width:68ch}
+.lede{font-size:17.5px;color:var(--ink2)}
+strong{font-weight:600;color:var(--ink)}
+em{font-style:normal;background:var(--sunk);padding:.06em .3em;border-radius:2px}
+
+/* ---------- stat band ---------- */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule);margin:0 0 30px}
+@media(max-width:720px){.stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:430px){.stats{grid-template-columns:1fr}}
+.stat{background:var(--ground);padding:18px 18px 16px}
+.stat .lab{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:7px}
+.stat .v{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:26px;font-weight:500;letter-spacing:-.02em;line-height:1.1}
+.stat .sub{font-size:12.5px;color:var(--faint);margin-top:5px;line-height:1.45}
+
+/* ---------- chart shell ---------- */
+figure{margin:0 0 30px;background:var(--surface);border:1px solid var(--rule);}
+figcaption{padding:16px 20px 0;font-size:13px;color:var(--muted);line-height:1.6}
+figcaption b{color:var(--ink2);font-weight:600}
+.figtitle{padding:18px 20px 0;font-family:"Zilla Slab","Noto Serif SC",serif;font-size:17px;font-weight:600}
+.chartbox{padding:8px 12px 16px;overflow-x:auto}
+svg{display:block;width:100%;height:auto}
+.legend{display:flex;gap:18px;padding:0 20px 16px;flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted)}
+.sw{width:11px;height:11px;border-radius:2px;flex:0 0 auto}
+
+/* ---------- diverging bar rows ---------- */
+.drows{padding:6px 20px 20px;display:flex;flex-direction:column;gap:2px}
+.drow{display:grid;grid-template-columns:112px 1fr 96px 148px;align-items:center;gap:14px;padding:7px 0;border-bottom:1px solid var(--rule2)}
+.drow:last-child{border-bottom:0}
+.dlabel{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink2);white-space:nowrap}
+.dtrack{position:relative;height:20px}
+.dzero{position:absolute;top:-4px;bottom:-4px;width:1px;background:var(--rule)}
+.dbar{position:absolute;top:3px;height:14px;display:block}
+.dbar.p{background:var(--gain);border-radius:0 3px 3px 0}
+.dbar.n{background:var(--loss);border-radius:3px 0 0 3px}
+.dval{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:13.5px;font-weight:500;text-align:right}
+.dmeta{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--faint);white-space:nowrap}
+@media(max-width:660px){
+  .drow{grid-template-columns:96px 1fr 84px;row-gap:2px}
+  .dmeta{grid-column:1/-1;padding-left:0}
+}
+
+/* ---------- callout ---------- */
+.call{border-left:3px solid var(--ink);background:var(--panel);padding:18px 22px;margin:0 0 26px}
+.call.g{border-left-color:var(--gain)}
+.call.r{border-left-color:var(--loss)}
+.call p:last-child{margin-bottom:0}
+.call .t{font-family:"Zilla Slab","Noto Serif SC",serif;font-size:17px;font-weight:600;margin-bottom:8px}
+
+/* ---------- numbered findings ---------- */
+.finds{display:flex;flex-direction:column;gap:0;margin:0 0 26px;border-top:1px solid var(--rule)}
+.find{display:grid;grid-template-columns:36px 1fr;gap:18px;padding:22px 0;border-bottom:1px solid var(--rule)}
+.find .n{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--muted);padding-top:3px;font-variant-numeric:tabular-nums}
+.find h3{font-size:18px;font-weight:600;margin-bottom:8px;letter-spacing:-.005em}
+.find p{margin-bottom:0;font-size:15.5px;color:var(--ink2)}
+.find p+p{margin-top:10px}
+.proof{margin-top:12px;background:var(--sunk);border:1px solid var(--rule2);padding:12px 14px;font-family:"IBM Plex Mono",monospace;font-size:12.5px;line-height:1.85;color:var(--ink2);overflow-x:auto}
+.proof .k{color:var(--faint)}
+
+/* ---------- scorecard ---------- */
+.card-table{width:100%;border-collapse:collapse;font-size:14.5px;margin-bottom:14px}
+.card-table th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);font-weight:400;padding:0 10px 9px 0;border-bottom:1px solid var(--ink)}
+.card-table td{padding:12px 10px 12px 0;border-bottom:1px solid var(--rule2);vertical-align:top;line-height:1.6}
+.card-table td:first-child{color:var(--ink2)}
+.card-table td:last-child{color:var(--muted);font-size:13.5px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-family:"IBM Plex Mono",monospace;font-size:11.5px;padding:2px 8px;border:1px solid currentColor;border-radius:11px;white-space:nowrap;line-height:1.7}
+.chip.ok{color:var(--gain);background:var(--gain-wash)}
+.chip.no{color:var(--loss);background:var(--loss-wash)}
+.chip.fix{color:var(--ink2);background:var(--sunk)}
+.chip.na{color:var(--faint);background:transparent;border-style:dashed}
+
+/* ---------- stacked rules ---------- */
+.stack{border:1px solid var(--rule);background:var(--surface);margin-bottom:26px}
+.stack-row{display:grid;grid-template-columns:1fr 128px 104px;gap:14px;padding:15px 20px;border-bottom:1px solid var(--rule2);align-items:baseline}
+.stack-row:last-child{border-bottom:0}
+.stack-row.base{background:var(--sunk)}
+.stack-row .rule{font-size:14.5px;color:var(--ink2)}
+.stack-row .tot{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:16px;font-weight:500;text-align:right}
+.stack-row .dlt{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--faint);text-align:right}
+@media(max-width:560px){.stack-row{grid-template-columns:1fr 96px;}.stack-row .dlt{grid-column:2}}
+
+/* ---------- tooltip ---------- */
+#tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .1s;background:var(--ink);color:var(--ground);font-family:"IBM Plex Mono",monospace;font-size:12px;line-height:1.6;padding:8px 11px;border-radius:3px;z-index:50;white-space:nowrap}
+.hit{fill:transparent;cursor:default}
+
+/* ---------- small multiples ---------- */
+.sm{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule)}
+@media(max-width:860px){.sm{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:460px){.sm{grid-template-columns:1fr}}
+.smc{background:var(--surface);padding:12px 10px 10px}
+.smh{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:0 4px 4px}
+.smh .dd{font-family:"IBM Plex Mono",monospace;font-size:13px;font-weight:500;color:var(--ink)}
+.smh .ee{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:13px;font-weight:500}
+.smf{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--faint);padding:3px 4px 0;line-height:1.65}
+.warn{border:1px solid var(--loss);border-left-width:3px;background:var(--loss-wash);padding:16px 20px;margin:0 0 26px}
+.warn .t{font-family:"Zilla Slab","Noto Serif SC",serif;font-size:17px;font-weight:600;margin-bottom:8px}
+.warn p{margin-bottom:0;font-size:15.5px}
+.warn p+p{margin-top:10px}
+
+/* ---------- rule book ---------- */
+.rb{border:1px solid var(--rule);background:var(--surface);margin:0 0 30px}
+.rb-grp{border-bottom:1px solid var(--ink)}
+.rb-grp:last-child{border-bottom:0}
+.rb-h{display:flex;align-items:baseline;gap:12px;padding:14px 20px 12px;background:var(--panel);border-bottom:1px solid var(--rule)}
+.rb-h .gk{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;color:var(--muted)}
+.rb-h .gt{font-family:"Zilla Slab","Noto Serif SC",serif;font-size:16px;font-weight:600}
+.rb-i{display:grid;grid-template-columns:1fr 116px;gap:16px;padding:16px 20px;border-bottom:1px solid var(--rule2);align-items:start}
+.rb-grp .rb-i:last-child{border-bottom:0}
+.rb-i.kill{background:var(--loss-wash)}
+.rb-i .txt{font-size:15.5px;line-height:1.65;color:var(--ink)}
+.rb-i .txt b{font-weight:600}
+.rb-i .why{margin-top:8px;font-family:"IBM Plex Mono",monospace;font-size:12px;line-height:1.8;color:var(--muted)}
+.rb-i .tag{justify-self:end;text-align:right}
+del{text-decoration:line-through;text-decoration-thickness:1.5px;color:var(--muted)}
+@media(max-width:560px){.rb-i{grid-template-columns:1fr}.rb-i .tag{justify-self:start;text-align:left}}
+footer{margin-top:60px;padding-top:26px;border-top:1px solid var(--rule);font-size:13px;color:var(--faint);line-height:1.75}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Webull · Apex 对账单复盘 · 08/24 – 09/02/2026</div>
+  <h1>142 次进出</h1>
+  <p class="dek">日内交易第二、三周。8 个交易日、911 笔成交、142 个从空仓到空仓的完整循环。这份复盘只用对账单里的成交记录说话——哪些纪律你已经做到了，哪些还在漏钱，以及你自己写的规则里有哪三条，数据说是反的。</p>
+  <div class="tape" id="tape" aria-hidden="true"></div>
+  <div class="tape-cap">每一根 = 一个进出循环，按成交先后排列 · 绿=盈 红=亏</div>
+</header>
+
+<section>
+  <div class="shead"><span class="k">01</span><h2>总账</h2></div>
+
+  <div class="stats">
+    <div class="stat"><span class="lab">期权已实现</span><span class="v pos">+$5,230</span><span class="sub">142 个循环</span></div>
+    <div class="stat"><span class="lab">正股</span><span class="v neg">−$194</span><span class="sub">QQQ 35 股波段 −$188<br>TSLA 20 股 −$6</span></div>
+    <div class="stat"><span class="lab">净实现</span><span class="v pos">+$5,037</span><span class="sub">上一段 8/07–8/21<br>是 −$933</span></div>
+    <div class="stat"><span class="lab">胜率</span><span class="v">39%</span><span class="sub">56 赢 / 86 亏</span></div>
+    <div class="stat"><span class="lab">盈亏比</span><span class="v">1.92</span><span class="sub">均赢 +$471<br>均亏 −$246</span></div>
+    <div class="stat"><span class="lab">每笔期望</span><span class="v pos">+$37</span><span class="sub">手续费全期仅 $120</span></div>
+  </div>
+
+  <p class="lede">这是转日内以来第一次月度级别转正。但 <strong>+$5,037 里有约 $1,256 不是这两周赚的</strong>——8/24 你平掉了上周留下的 CRWV 2026-10-16 P70（卖 9 张，其中 4 张的成本在上周）。剔掉这部分，这两周自己做出来的大约是 <strong class="pos">+$3,780</strong>。<br><span style="font-size:15px;color:var(--muted)">下面第 03 节起的所有拆解，都<strong>剔掉了这个跨周循环</strong>，在干净的 <span class="mono">141 个循环 / +$4,207</span> 上做——否则上周的成本会污染每一档统计。</span></p>
+
+  <figure>
+    <div class="figtitle">每天的收盘结果，和它当天最深的时候</div>
+    <div class="chartbox"><svg id="daily" viewBox="0 0 900 330" role="img" aria-label="八个交易日的期权已实现盈亏与当日盘中最大累计回撤"></svg></div>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--gain)"></i>当日收正</span>
+      <span><i class="sw" style="background:var(--loss)"></i>当日收负</span>
+      <span><i class="sw" style="background:var(--rule);height:3px;width:16px;border-radius:2px"></i>盘中累计最低点</span>
+    </div>
+    <figcaption><b>8 天里有 4 天是先见负数再翻正。</b>8/24 盘中一度累计 −$3,887，收在 +$2,108；8/27 一度 −$2,330，收在 −$170。这条形状很重要——它直接否掉了你的"日亏 $1,500 停手"（见第 06 节）。</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="shead"><span class="k">02</span><h2>每一天的浮动曲线</h2></div>
+
+  <div class="warn">
+    <div class="t">先说清楚：做不成分钟级的</div>
+    <p>Webull／Apex 的成交确认单<strong>不带成交时间</strong>——全文只出现过两个时间，都是第 2 页 GTC 条款里的 4:00pm 和 9:30am，不是你的成交。确认单自己也写着：执行时间要另行书面申请才提供。</p>
+    <p>所以下面这 8 条曲线的横轴是<strong>成交序号</strong>，不是时钟。<strong>顺序是真的，间距不是。</strong>纵轴是<strong>逐笔盯市的浮动盈亏</strong>：每成交一笔，就用那一笔的价格给当时还拿着的仓位重新估值——所以它含浮盈浮亏，比第 01 节那张只算已实现的图更接近你当时屏幕上看到的数。</p>
+    <p>要真正的分钟轴，导出 <strong>Webull → 订单 → 历史订单 → 含成交时间的 CSV</strong>，我把这 911 笔按分钟排回去重画。</p>
+  </div>
+
+  <figure>
+    <div class="figtitle">八天的日内浮动盈亏（八张图共用同一把尺）</div>
+    <div class="sm" id="sm"></div>
+    <div class="legend" style="padding-top:14px">
+      <span><i class="sw" style="background:var(--gain)"></i>水上 · 当日浮盈</span>
+      <span><i class="sw" style="background:var(--loss)"></i>水下 · 当日浮亏</span>
+      <span><i class="sw" style="background:var(--gain);border-radius:50%"></i>当日最高</span>
+      <span><i class="sw" style="background:var(--loss);border-radius:50%"></i>当日最低</span>
+    </div>
+    <figcaption><b>八天里最深的一刻是 8/24 第 84 笔的 −$5,110</b>——比第 01 节按"已实现循环"算出来的 −$3,887 还深 $1,223，差额就是当时还没平的浮亏。那天最后收在 +$1,105。八张图共用 <span class="mono">+$2,600 ~ −$5,300</span> 的纵轴；虚线是 +$2,000 / −$2,000 / −$4,000，实线是 0。</figcaption>
+  </figure>
+
+  <p class="lede">把八天按"最高点出现在什么位置"排一下，这两周自己分成了两类：</p>
+
+  <div class="proof" style="margin-bottom:26px">
+<span class="k">■ 峰值在后段的日子 —— 全部收正，峰后几乎不吐</span><br>
+08/26　峰值第 <b>127/127</b> 笔（100%）　收 <span class="pos">+$1,797</span>　峰后吐回 <span class="k">$23</span><br>
+08/28　峰值第 <b>82/88</b> 笔（93%）　　收 <span class="pos">+$1,783</span>　峰后吐回 <span class="k">$608</span><br>
+08/24　峰值第 <b>132/153</b> 笔（86%）　收 <span class="pos">+$1,105</span>　峰后吐回 <span class="k">$554</span><br>
+09/01　峰值第 <b>56/71</b> 笔（79%）　　收 <span class="pos">+$1,123</span>　峰后吐回 <span class="k">$358</span><br>
+<br>
+<span class="k">■ 峰值在前段的日子 —— 全部收负，之后每一笔都在还钱</span><br>
+08/31　峰值第 <b>40/192</b> 笔（21%）　　收 <span class="neg">−$651</span>　　峰后又做了 <b>152 笔</b>，吐回 <span class="neg">$1,713</span><br>
+08/25　峰值第 <b>8/120</b> 笔（7%）　　　收 <span class="neg">−$1,654</span>　峰后又做了 <b>112 笔</b>，吐回 <span class="neg">$2,159</span><br>
+08/27　峰值第 <b>1/106</b> 笔（1%）　　　收 <span class="neg">−$158</span>　　全天 <b>105 笔</b>都在水下<br>
+<br>
+<span class="k">■ 例外　09/02 峰值在 69% 处，但最后 14 笔吐回 $1,468（+$2,395 → +$927）</span><br>
+<span class="k">八天峰后合计吐回 $7,042　·　若每天在峰值收工 = +$11,314（实际 +$4,272）</span></div>
+
+  <p><strong>但"在峰值收工"是事后才知道的，不能当规则。</strong>我把它能写成规则的所有形式都在这条浮动曲线上重测了一遍：从当日高点回撤 $600 / $900 / $1,200 / $1,500 / $2,000 / $2,500 就收工——全部为负，−$3,913 到 −$5,640；浮动跌破 −$1,000 到 −$5,000 就收工——同样全部为负。<strong>连我上一版建议的 −$4,000 熔断，在这条曲线上也是负的（−$5,086）</strong>：8/24 确实下探到过 −$5,110，在那里收工就把后面整段反弹砍掉了。第 06 节和第 08 节我都改过来了。</p>
+</section>
+
+<section>
+  <div class="shead"><span class="k">03</span><h2>已经改过来的五件事</h2></div>
+  <p class="lede">这些不是"感觉好一些"，是对账单里能数出来的。</p>
+
+  <div class="finds">
+    <div class="find"><div class="n">01</div><div>
+      <h3>不过夜了——142 / 142，零例外</h3>
+      <p>把每个合约按"空仓 → 建仓 → 回到空仓"切开，142 个循环全部在当天闭合。唯一一笔跨日的动作是 8/24 卖出 CRWV 2026-10-16 P70 四张，那是在<strong>清理上周留下的旧仓</strong>，不是新开的。上一份复盘的核心病"日内赚、过夜亏"——这一栏现在是空的。</p>
+    </div></div>
+
+    <div class="find"><div class="n">02</div><div>
+      <h3>合约选对了：73% 是 0DTE，"3–7 天半吊子"只剩 6 笔</h3>
+      <p>104/142 是当日到期，31 笔是 1–2 天。你自己列为禁区的 3–7DTE 只剩 6 笔——而这 6 笔正好合计 <strong class="neg">−$1,868</strong>，是你这两周所有"分类错误"里最贵的一类。</p>
+      <div class="proof"><span class="k">3–7DTE 的全部 6 笔　</span><br>
+08/25　MRVL 08-28 C250　DTE3　<span class="neg">−$1,061</span><br>
+08/25　MRVL 08-28 C245　DTE3　<span class="neg">−$651</span><br>
+08/25　MRVL 08-28 C245　DTE3　<span class="pos">+$249</span><br>
+08/25　MRVL 08-28 C245　DTE3　<span class="k">−$0</span><br>
+09/01　MRVL 09-04 P200　DTE3　<span class="neg">−$230</span><br>
+08/24　MRNA 08-28 P130　DTE4　<span class="neg">−$175</span><br>
+<span class="k">禁掉这 6 笔 → +$6,075（+$1,868）</span></div>
+    </div></div>
+
+    <div class="find"><div class="n">03</div><div>
+      <h3>止损已经内化，而且比你自己写的规则还严</h3>
+      <p>你的底线是 −40% 开始减仓。141 个循环里<strong>只有 2 笔跌破 −40%</strong>：8/27 的 META 08-28 P567.5（−54%，−$656）和 8/25 的 SPY P758（−52%，只亏 $2）。绝大多数亏损落在 −5% ~ −20% 这一档。</p>
+      <p>换句话说，<strong>−40% 这条线现在是废条款</strong>。你实际执行的止损远比它紧。这是好消息，但它也把问题挪到了别处：−5%~−20% 那一档有 50 笔，合计 <strong class="neg">−$11,970</strong>——不是让亏损跑掉，是<strong>进场次数太多</strong>。</p>
+    </div></div>
+
+    <div class="find"><div class="n">04</div><div>
+      <h3>向下加仓在收敛</h3>
+      <p>按成交价对比持仓均价，逐笔判定加仓方向。8/24 向下加 20 次，之后 8/26 只有 5 次、8/28 只有 3 次、9/02 只有 4 次。第 2 周 51 次（10.2 次/天）→ 第 3 周 25 次（8.3 次/天）。8/31 那天反弹到 16 次，但那天有它自己的病（见第 05 节）。</p>
+    </div></div>
+
+    <div class="find"><div class="n">05</div><div>
+      <h3>"加赢家"已经是肌肉记忆，而且它就是你全部的利润</h3>
+      <p>你最赚的几笔全部是同一个形状：<strong>小单试对方向 → 顺势把仓位放大 5 到 9 倍 → 分批出</strong>。这正是你写的"杠杆那最猛的一段"，而且你真的在做。</p>
+      <div class="proof">
+08/24　MU 08-24 C910　　首笔 $1,080 → 峰值 $9,210　<span class="pos">+$4,607</span><br>
+09/02　META 09-02 C592.5　首笔 $945 → 峰值 $5,140　<span class="pos">+$2,628</span><br>
+08/24　MU 08-24 P900　　首笔 $1,545 → 峰值 $8,680　<span class="pos">+$1,614</span><br>
+08/27　CRM 08-28 P245　　首笔 $556 → 峰值 $5,420　<span class="pos">+$1,549</span><br>
+08/24　MU 08-24 C915　　首笔 $1,251 → 峰值 $6,736　<span class="pos">+$1,541</span><br>
+<span class="k">最赚 5 笔合计 +$11,939　·　去掉它们，剩下 136 笔 = −$7,732</span></div>
+      <p>最后那行要认真读：<strong>你的账户是靠 5 笔撑起来的，其余 136 笔净亏 $7,732。</strong>这不一定是坏事——动能交易本来就长这样——但它意味着任何砍掉大单的规则都会直接砍掉你的全部收益。</p>
+    </div></div>
+  </div>
+</section>
+
+<section>
+  <div class="shead"><span class="k">04</span><h2>还没改的：第 2 轮开始，你在把钱还回去</h2></div>
+
+  <p class="lede">这是这两周唯一真正在吃利润的行为，也是你自己第一个写下来、执行率却是 <strong>0</strong> 的规则——"同一合约当天不再进"。141 个循环里，<strong>78 个是同一合约当天的第 2 轮及以后</strong>。</p>
+
+  <figure>
+    <div class="figtitle">按"同一合约当天第几轮"拆开的盈亏</div>
+    <div class="drows">
+      <div class="drow"><div class="dlabel">第 1 轮</div><div class="dtrack"><span class="dzero" style="left:34%"></span><i class="dbar p" style="left:34%;width:66%"></i></div><div class="dval pos">+$8,524</div><div class="dmeta">63 笔 · 胜率 49%</div></div>
+      <div class="drow"><div class="dlabel">第 2 轮</div><div class="dtrack"><span class="dzero" style="left:34%"></span><i class="dbar p" style="left:34%;width:5.03%"></i></div><div class="dval pos">+$650</div><div class="dmeta">32 笔 · 胜率 25%</div></div>
+      <div class="drow"><div class="dlabel">第 3 轮</div><div class="dtrack"><span class="dzero" style="left:34%"></span><i class="dbar n" style="left:16.31%;width:17.69%"></i></div><div class="dval neg">−$2,285</div><div class="dmeta">19 笔 · 胜率 32%</div></div>
+      <div class="drow"><div class="dlabel">第 4 轮</div><div class="dtrack"><span class="dzero" style="left:34%"></span><i class="dbar p" style="left:34%;width:1.51%"></i></div><div class="dval pos">+$195</div><div class="dmeta">8 笔 · 胜率 38%</div></div>
+      <div class="drow"><div class="dlabel">第 5 轮</div><div class="dtrack"><span class="dzero" style="left:34%"></span><i class="dbar n" style="left:11.64%;width:22.36%"></i></div><div class="dval neg">−$2,888</div><div class="dmeta">6 笔 · 胜率 50%</div></div>
+      <div class="drow"><div class="dlabel">第 6 轮及以后</div><div class="dtrack"><span class="dzero" style="left:34%"></span><i class="dbar p" style="left:34%;width:.35%"></i></div><div class="dval">+$12</div><div class="dmeta">13 笔 · 胜率 31%</div></div>
+    </div>
+    <figcaption><b>第 1 轮 +$8,524，第 2 轮往后合计 −$4,316。</b>你的选股和择时是有效的——只在第一次表达它的时候。</figcaption>
+  </figure>
+
+  <div class="call r">
+    <div class="t">你写的那句话，数据一字不差</div>
+    <p>「不能加输家！禁止向下加仓，<strong>紧跟在亏损后面的那几次全部继续亏</strong>。顺序完全反了：该减的时候在加。」</p>
+    <p style="margin-top:10px">上一轮亏钱后又进同一合约：<strong class="neg">51 笔，−$4,167，胜率 29%</strong>。<br>上一轮赚钱后再进同一合约：27 笔，−$149，胜率 33%。</p>
+    <p style="margin-top:10px;color:var(--muted);font-size:14.5px">注意后一行——<em>就算上一轮是赢的，重进也不赚钱</em>。问题不在"报复"，在"重进"本身。</p>
+  </div>
+
+  <h3 style="font-size:19px;margin:34px 0 12px">8/31 是这个病的极端版本</h3>
+  <p>那天你在 <strong>6 个 TSLA 当日合约</strong>之间做了 <strong>32 个循环、190 笔成交</strong>，首笔进场只有 $76 到 $508，在 C365 / C367.5 / P362.5 / P365 / P367.5 之间来回翻多空，最后净 <strong class="neg">−$684</strong>（另加 20 股 TSLA 正股 −$6）。</p>
+  <div class="proof">
+08/31　TSLA　call 方向 22 笔 <span class="pos">+$78</span>　·　put 方向 9 笔 <span class="neg">−$720</span><br>
+<span class="k">C365 做了 11 轮，C367.5 做了 11 轮，P362.5 / P365 / P367.5 各 2–4 轮</span><br>
+<span class="k">全天最大单笔首仓 $508　·　平均每个循环 5.9 笔成交</span></div>
+  <p style="margin-top:16px">不是行情不好——那天 TSLA 就是个震荡日。是<strong>你把一个震荡日当成了 32 次机会</strong>。对比 8/24：同样 20 个循环，但每个循环都有真实仓位和方向判断，盘中扛过 −$3,887 收在 +$2,108。</p>
+</section>
+
+<section>
+  <div class="shead"><span class="k">05</span><h2>首笔进场金额，是你最没管住也最该管的变量</h2></div>
+
+  <p class="lede">这个变量的好处是：<strong>它在下单那一刻就已知</strong>，不像"峰值权利金"是事后才知道的。</p>
+
+  <figure>
+    <div class="figtitle">按首笔进场金额分档</div>
+    <div class="drows">
+      <div class="drow"><div class="dlabel">&lt; $500</div><div class="dtrack"><span class="dzero" style="left:30%"></span><i class="dbar n" style="left:5.45%;width:24.55%"></i></div><div class="dval neg">−$2,821</div><div class="dmeta">64 笔 · 胜率 34%</div></div>
+      <div class="drow"><div class="dlabel">$500 – $1,000</div><div class="dtrack"><span class="dzero" style="left:30%"></span><i class="dbar p" style="left:30%;width:70%"></i></div><div class="dval pos">+$8,042</div><div class="dmeta">34 笔 · 胜率 50%</div></div>
+      <div class="drow"><div class="dlabel">$1,000 – $2,000</div><div class="dtrack"><span class="dzero" style="left:30%"></span><i class="dbar p" style="left:30%;width:22.02%"></i></div><div class="dval pos">+$2,530</div><div class="dmeta">38 笔 · 胜率 42%</div></div>
+      <div class="drow"><div class="dlabel">$2,000 – $4,000</div><div class="dtrack"><span class="dzero" style="left:30%"></span><i class="dbar n" style="left:18.32%;width:11.68%"></i></div><div class="dval neg">−$1,342</div><div class="dmeta">3 笔 · 胜率 0%</div></div>
+      <div class="drow"><div class="dlabel">&gt; $4,000</div><div class="dtrack"><span class="dzero" style="left:30%"></span><i class="dbar n" style="left:10.84%;width:19.16%"></i></div><div class="dval neg">−$2,202</div><div class="dmeta">2 笔 · 胜率 0%</div></div>
+    </div>
+    <figcaption><b>$500–$1,000 这一档承担了全部利润。</b>首笔超过 $2,000 的 5 笔全军覆没。首笔低于 $500 的 64 笔——手痒单、试探单——净亏 $2,821，胜率只有 34%。</figcaption>
+  </figure>
+
+  <div class="call">
+    <div class="t">这条修正了我上次给你的结论</div>
+    <p>上次我说"每笔权利金上限 $4,000"数据上是反的。现在能说清为什么：那次我量的是<strong>峰值</strong>权利金，而峰值大是"<em>赢了才加上去</em>"的结果，不是原因。这次换成<strong>首笔</strong>——决策时就已知的量——结论就正过来了：<br><span class="mono" style="font-size:13.5px;display:inline-block;margin-top:8px">首笔 ≤ $2,000　→　136 笔　+$7,751　(+$3,544)</span></p>
+  </div>
+
+  <p>还有一组数字值得单独看：<strong>买一次、卖一次就结束的 40 笔</strong>（既没加仓也没减仓），合计 <strong class="neg">−$3,660，胜率只有 18%</strong>，平均首仓 $982。这些不是"止损干净"，这些是<strong>本来就不该进</strong>——进去发现不对就砍。它们和上面 &lt;$500 那一档高度重叠。</p>
+</section>
+
+<section>
+  <div class="shead"><span class="k">06</span><h2>三条规则的问题，不在执行，在刻度</h2></div>
+
+  <p class="lede">这三条你其实都没怎么违反——它们只是被定在了错的位置上。我把每一条的替代版本都拿你自己的成交记录重放过一遍，下面是结果，不是意见。</p>
+
+  <div class="finds">
+    <div class="find"><div class="n">✕</div><div>
+      <h3>「当日亏 $1,500 停手」——三种写法全部为负</h3>
+      <p>我没有只测你写的那一版，把"停手"能有的三种写法都测了：</p>
+      <div class="proof">
+<span class="k">按金额　</span>日亏 $1,000 / $1,500 / $2,500 停手　<span class="neg">−$4,592 / −$6,158 / −$4,761</span><br>
+<span class="k">按次数　</span>连续 2 / 3 / 4 笔亏损停手　　　　<span class="neg">−$5,746 / −$6,096 / −$7,280</span><br>
+<span class="k">按回撤　</span>从当日高点回撤 $600 / $900 / $1,200　<span class="neg">−$2,455 / −$4,673 / −$3,942</span><br>
+<span class="k">按笔数　</span>当天最多 6 / 8 / 10 个循环　　　　<span class="neg">−$2,335 / −$4,894 / −$7,698</span></div>
+      <p style="margin-top:14px">原因是同一个：<strong>你的大单出现在挨打之后。</strong>8/24 累计 −$3,887 之后才有那笔 +$4,607；8/27 触发线之后还有 +$1,428。任何形式的"今天到此为止"都会砍掉这一段。</p>
+      <p style="margin-top:14px"><strong>我一开始想留一个"永远不会触发"的宽熔断（−$4,000），第 02 节把它也否掉了。</strong>在含浮动的逐笔曲线上，8/24 真的下探到 −$5,110——所以 −$4,000 会触发，而且在那里收工要花掉 $5,086。把浮动算进去之后，从 −$1,000 到 −$5,000、从回撤 $600 到 $2,500，<strong>没有任何一个刻度是正的</strong>。</p>
+      <p><strong>结论只能是：日级别的停手规则，在他这两周的数据上一律为负。</strong>原因是结构性的——那笔 +$4,607 就是从 −$5,110 的坑里爬出来的。风险控制得放到<strong>仓位层面</strong>（首笔金额、一个合约只做一轮、不向下加仓），不是日级别。这一点后面第 08 节 E 组给了替代方案。</p>
+    </div></div>
+
+    <div class="find"><div class="n">⚑</div><div>
+      <h3>「获利 100% 减半」——8 天一次都没触发过，而且我上一版建议的 +25% 是错的</h3>
+      <p>先更正一处：我原来说它"只触发 1 次"，指的是 8/25 那笔 SPY P763 的 +105%。翻回原始成交才发现那是全期<strong>唯一一笔卖出开仓</strong>（$0.31 卖、$0.15 买回，赚 $16），不是买入的仓位涨了一倍。<strong>所以这条规则在这 8 天里一次都没有触发过。</strong></p><p>那要不要把刻度调低？我当时的推理是"你的赢家中位只实现 +13%，所以 100% 太高"——推理听着对，但我没重放就说了。重放之后结论正好相反：<strong>越紧越亏。</strong></p>
+      <div class="proof">
+<span class="k">用他自己的成交价重放 141 个循环，基准 +$4,324</span><br>
++15% 减一半　触发 39 笔　<span class="neg">−$2,774</span>　　+15% 减 1/3　<span class="neg">−$1,870</span><br>
++20% 减一半　触发 26 笔　<span class="neg">−$2,700</span>　　+20% 减 1/3　<span class="neg">−$1,845</span><br>
++25% 减一半　触发 23 笔　<span class="neg">−$1,790</span>　　+25% 减 1/3　<span class="neg">−$1,192</span><br>
++30% 减一半　触发 21 笔　<span class="neg">−$879</span>　　　+30% 减 1/3　<span class="neg">−$568</span><br>
++50% 减一半　触发 10 笔　<span class="pos">+$175</span>　　　+100% 减一半　<span class="pos">+$292</span></div>
+      <p style="margin-top:14px">机械止盈砍掉的，正好是撑起整个账户的那几笔——第 03 节那句"去掉最赚的 5 笔，剩下 137 笔 −$6,709"就是这个意思。<strong>你原来的 +100% 可以留着——它 8 天一次都没触发，是无害的摆设；但比它紧的任何刻度都要删掉。</strong></p>
+      <p>还有一个佐证：模拟"涨到 +20%/+40%/+50% 后回落一半就全平"这种移动止盈，结果是 <strong>±$0</strong>——说明<strong>你的实际出场已经跑在结构止损前面了</strong>。出场不是你的问题，别再往这上面加规则。</p>
+    </div></div>
+
+    <div class="find"><div class="n">⚑</div><div>
+      <h3>「每笔权利金上限 $4,000」——上限该卡在首笔，不是总额</h3>
+      <p>总额是<strong>赢出来的</strong>：MU C910 首笔 $1,080、峰值 $9,210，那 $8,130 是它自己挣出来的位置。卡总额等于卡掉这一段。换成下单那一刻就已知的<strong>首笔金额</strong>，结论就正过来了——见第 05 节。</p>
+      <div class="proof">
+只设下限　首笔 ≥ $500　　　　留 77 笔　<span class="pos">+$7,028</span>　(+$2,821)<br>
+只设上限　首笔 ≤ $2,000　　　留136 笔　<span class="pos">+$7,751</span>　(+$3,544)<br>
+上下限都设　$500 – $2,000　　留 72 笔　<span class="pos">+$10,571</span>　(+$6,364)<br>
+<span class="k">干净基准（141 个循环，剔除 CRWV 跨周仓）= +$4,207</span></div>
+    </div></div>
+  </div>
+</section>
+
+<section>
+  <div class="shead"><span class="k">07</span><h2>规则记分卡</h2></div>
+  <div style="overflow-x:auto">
+  <table class="card-table">
+    <thead><tr><th style="width:44%">你写下的规则</th><th style="width:15%">这两周</th><th>对账单里的证据</th></tr></thead>
+    <tbody>
+      <tr><td>只做日内，不过夜</td><td><span class="chip ok">✓ 做到了</span></td><td>142/142 循环当日闭合</td></tr>
+      <tr><td>停掉 3–7DTE 的半吊子持仓</td><td><span class="chip ok">✓ 基本做到</span></td><td>只剩 6 笔，但那 6 笔 −$1,868</td></tr>
+      <tr><td>−40% 开始减仓，彻底离场</td><td><span class="chip ok">✓ 超额做到</span></td><td>仅 2 笔跌破 −40%；实际止损更紧</td></tr>
+      <tr><td>只能加赢家，跟资金流向顺势</td><td><span class="chip ok">✓ 做到了</span></td><td>最赚 5 笔全是小单→放大 5–9 倍</td></tr>
+      <tr><td>杠杆那最猛的一段</td><td><span class="chip ok">✓ 做到了</span></td><td>MU C910 首笔 $1,080 → 峰值 $9,210</td></tr>
+      <tr><td>禁止向下加仓</td><td><span class="chip no">✕ 在收敛，未清零</span></td><td>第 2 周 51 次 → 第 3 周 25 次</td></tr>
+      <tr><td><strong>同一合约当天不再进</strong></td><td><span class="chip no">✕ 执行率 0</span></td><td>78/142 是第 2 轮及以后，合计 −$4,317</td></tr>
+      <tr><td>亏损后不 revenge trade</td><td><span class="chip no">✕ 没做到</span></td><td>亏损后重进同一合约 51 笔 −$4,167</td></tr>
+      <tr><td>回撤到成本，仓位减半</td><td><span class="chip fix">⚑ 降级为提醒</span></td><td>叠加重放只值 +$16，基本无效</td></tr>
+      <tr><td>获利 100% 仓位减半</td><td><span class="chip ok">✓ 留着，无害</span></td><td>8 天零触发；比它紧的刻度全部亏钱</td></tr>
+      <tr><td>当日亏 $1,500 停手</td><td><span class="chip no">✕ 删掉</span></td><td>四种写法、二十个刻度全为负；改成权利金上限</td></tr>
+      <tr><td>每笔权利金上限 $4,000</td><td><span class="chip fix">⚑ 改成"首笔"</span></td><td>卡总额＝卡掉赢出来的仓位；改卡首笔</td></tr>
+      <tr><td>6:35–8:00 决定一天，9:30 后不碰</td><td><span class="chip na">？ 查不了</span></td><td>对账单没有成交时间戳</td></tr>
+      <tr><td>亏损后强制冷却 15 分钟</td><td><span class="chip na">？ 查不了</span></td><td>同上</td></tr>
+      <tr><td>进场 checklist、记录进场理由与心态</td><td><span class="chip na">？ 查不了</span></td><td>不在对账单里，只有你自己知道</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <div class="shead"><span class="k">08</span><h2>重新制定的规矩</h2></div>
+
+  <p class="lede">每一条后面的数字，都是拿你 8/24–9/02 的 141 个循环重放出来的，基准 <span class="mono">+$4,207</span>。<strong>删掉的比新增的多</strong>——你不缺规则，你缺的是把规则定在对的刻度上。</p>
+
+  <div class="rb">
+
+    <div class="rb-grp">
+      <div class="rb-h"><span class="gk">A</span><span class="gt">选合约</span></div>
+      <div class="rb-i"><div>
+        <div class="txt"><b>A1　只做 0–2DTE。</b>3–7DTE 一张不碰，不过夜。</div>
+        <div class="why">这两周只违反 6 次，那 6 次 −$1,868　·　守住 = +$1,868</div>
+      </div><div class="tag"><span class="chip ok">✓ 保留</span></div></div>
+      <div class="rb-i"><div>
+        <div class="txt"><b>A2　标的池不收窄，一天做几个合约不设上限。</b>AI 选股 + 大网红股 + Mega7 + QQQ/SPY，夜盘划出阻力区上下限，6:35 定方向——池子照旧这么大。</div>
+        <div class="txt" style="margin-top:10px;font-size:14.5px;color:var(--ink2)">我测的是这样一条规则：<em>把当天按时间顺序碰到的头 3 个合约记下来，之后不管出现什么机会都不做了</em>。听上去像"专注"，实际是 <b class="neg">−$10,247</b>——因为<b>你当天最早碰的合约，往往正是你还没找到方向时试错的那几个</b>。</div>
+        <div class="why">每天只做前 2 个合约 −$3,914　·　前 3 个 <b>−$10,247</b>　·　前 4 个 −$10,467　·　前 5 个 −$3,114<br>
+<br>
+<span class="k">08/24 当天碰合约的先后：</span><br>
+1.MRNA P130 <span class="neg">−175</span>　2.MU P890 <span class="pos">+957</span>　3.MU P895 <span class="neg">−5,755</span>　4.MU P900 +63　<b>5.MU C910 <span class="pos">+5,163</span></b>　6.MU P910 −243<br>
+<span class="k">→ 只做前 3 个＝把亏 $5,755 的那个留下，把救回这一天的第 5 个砍掉，8/24 变成 −$4,973</span><br>
+<br>
+<span class="k">09/02 同理：</span>1.META C587.5 +125　2.TSLA P350 −272　3.MU C955 +47　4.META C595 <span class="neg">−651</span>　<b>5.META C592.5 <span class="pos">+2,347</span></b><br>
+<span class="k">→ 全天的钱都在第 5 个合约上</span><br>
+<br>
+<span class="k">反过来看：8/26 做了 10 个合约 +$1,767，8/28 做了 11 个 +$1,768——多不是问题</span></div>
+      </div><div class="tag"><span class="chip ok">✓ 保留</span></div></div>
+      <div class="rb-i"><div>
+        <div class="txt"><b>A3　进场 checklist 照旧。</b>黑天鹅 / 突破 / 资金流入 / 消息面 / 大盘方向 / 财报预期 / 概率 / 仓位，逐条过。</div>
+        <div class="why">不在对账单里，只有你自己能验</div>
+      </div><div class="tag"><span class="chip ok">✓ 保留</span></div></div>
+    </div>
+
+    <div class="rb-grp">
+      <div class="rb-h"><span class="gk">B</span><span class="gt">开仓　<span style="font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.1em;color:var(--muted)">新规矩的核心</span></span></div>
+      <div class="rb-i"><div>
+        <div class="txt"><b>B1　一个合约，当天只表达一次。做完一轮，划掉。</b></div>
+        <div class="txt" style="margin-top:10px;font-size:14.5px;color:var(--ink2)">
+          <b>"一轮"＝</b>从你在这个合约上第一次买入，到把它全部卖光、手上归零，为止。中间加几次仓、分几次卖，都还算同一轮。<br>
+          <b>"一个合约"＝</b>具体到<em>标的＋到期日＋行权价＋看涨看跌</em>，比如 <span class="mono">TSLA 2026-08-31 C365</span>。<span class="mono">C367.5</span> 是<b>另一个</b>合约，不受这一条限制。<br>
+          <b>所以规则不是"一天只做一笔"</b>——是清零之后不许回头再进<em>同一个</em>合约。想继续做 TSLA，可以换行权价、换方向、换到期日，但 C365 这一格今天已经用掉了。
+        </div>
+        <div class="why"><span class="k">为什么：8/24 你在 MU P895 上来回做了 5 轮</span><br>
+第1轮 首笔$1,635 <span class="neg">−405</span>　第2轮 $1,410 <span class="neg">−247</span>　第3轮 $425 <span class="neg">−1,604</span>　第4轮 $420 <span class="neg">−650</span>　第5轮 $1,425 <span class="neg">−2,849</span><br>
+<span class="k">一个合约一天亏掉 $5,755。B1 会让它停在第 1 轮的 −$405，光这一个合约就省 $5,350。</span><br>
+<br>
+<span class="k">全样本：</span>第 1 轮 63 笔 <span class="pos">+$8,524</span>（胜率 49%）　·　第 2 轮起 78 笔 <span class="neg">−$4,316</span>（胜率 31%）<br>
+<span class="k">只做首轮 = <b>+$4,316</b>　·　这一条同时替代了"不 revenge"和"冷却 15 分钟"</span><br>
+<br>
+<span class="k">⚠ 不是每个合约都对：8/31 TSLA C365 你做了 11 轮，第 1 轮 −$405，11 轮加起来 +$131。</span><br>
+<span class="k">B1 在这个合约上会做错 $536。它是统计上对，不是每一次都对——但 63 : 78 的对比已经足够。</span></div>
+      </div><div class="tag"><span class="chip fix">＋ 新增</span></div></div>
+      <div class="rb-i"><div>
+        <div class="txt"><b>B2　首笔 $500 – $2,000。</b></div>
+        <div class="txt" style="margin-top:10px;font-size:14.5px;color:var(--ink2)">
+          <b>"首笔"＝</b>你在这个合约上<em>第一次</em>按下买入的那一张单的金额＝<span class="mono">张数 × 权利金 × 100</span>。不是这笔交易最后投进去多少，就是第一下。<br>
+          举例：8/24 MU C910 第一下买 3 张 @$3.60 ＝ <span class="mono">$1,080</span>，这就是首笔。后面加到 $9,210 不算在这一条里。<br>
+          <b>低于 $500 不下单</b>——连 $500 都不敢下，说明你自己也没信；这类单子占着注意力，还骗你"我在参与"。<br>
+          <b>高于 $2,000 不下单</b>——一上来就重手，等于把试错空间和加仓空间一次性用光；错了没有退路，对了也没得加。
+        </div>
+        <div class="why"><span class="k">按首笔金额分档（141 个循环）</span><br>
+&lt;$500　　　64 笔 <span class="neg">−$2,821</span>（胜率 34%）　　<span class="k">← 手痒单，纯放血</span><br>
+$500–1,000　34 笔 <span class="pos">+$8,042</span>（胜率 50%）　　<span class="k">← 全部利润在这</span><br>
+$1,000–2,000 38 笔 <span class="pos">+$2,530</span>（胜率 42%）<br>
+&gt;$2,000　　 5 笔 <span class="neg">−$3,544</span>（胜率 <b>0%</b>）<br>
+<span class="k">上下限都设 = <b>+$6,364</b></span><br>
+<br>
+<span class="k">首笔 &gt;$2,000 的全部 5 笔，没有一笔赚钱：</span><br>
+08/25 MRVL C245　5张@$12.30 = $6,150　<span class="neg">−$651</span><br>
+08/24 MU P900　　7张@$6.15 = $4,305　<span class="neg">−$1,551</span><br>
+09/02 META C592.5 4张@$7.90 = $3,160　<span class="neg">−$280</span><br>
+09/02 META C592.5 4张@$7.35 = $2,940　<span class="k">−$0</span><br>
+08/25 MRVL C250　2张@$11.20 = $2,240　<span class="neg">−$1,061</span><br>
+<br>
+<span class="k">★ B2 顺手堵住了 B1 的漏洞：</span>光有 B1，你可以在相邻行权价之间跳着做（8/31 就是 6 个合约各做 5 轮）。<br>
+<span class="k">但 8/31 那 32 个循环的首笔全在 $76–$508 之间，B2 一个都不放行——所以 8/31 在新规矩下是 0 笔。</span></div>
+      </div><div class="tag"><span class="chip fix">＋ 新增</span></div></div>
+      <div class="rb-i kill"><div>
+        <div class="txt"><del><b>B3　每笔权利金上限 $4,000</b></del></div>
+        <div class="txt" style="margin-top:10px;font-size:14.5px;color:var(--ink2)">
+          你原来这条说的是：<em>一个合约上前后投进去的钱，加起来不超过 $4,000</em>。删掉它的意思是——<b>加仓之后的总额不设上限，只管首笔。</b><br>
+          因为总额是<b>赢出来的</b>，不是定出来的：8/24 MU C910 首笔 $1,080，一路顺势加到峰值 <span class="mono">$9,210</span>，最后 <span class="pos">+$4,607</span>。$4,000 那条线会在半路把这笔单子拦腰截断。<br>
+          <b>反过来说不是"要下重注"</b>——B2 管着你只能从 $500–$2,000 起步，C3 管着后面每一张都得用这笔单子自己的浮盈买。总额是这两条的结果，不需要单独再定一个数。
+        </div>
+        <div class="why">峰值权利金 &gt;$4,000 的 23 笔 <span class="pos">+$8,291</span>（胜率 61%）　·　≤$4,000 的 119 笔 <span class="neg">−$3,061</span><br>
+<span class="k">⚠ 这个对比是内生的（赢了才加得上去），所以它证明的不是"大仓位好"，</span><br>
+<span class="k">而是"别在赢的时候被一条总额线拦住"。真正能事前决定的只有首笔。</span><br>
+<span class="k">尾部由 E4（同一时刻在外权利金 $10,000 封顶）兜住。</span></div>
+      </div><div class="tag"><span class="chip no">✕ 删除</span></div></div>
+    </div>
+
+    <div class="rb-grp">
+      <div class="rb-h"><span class="gk">C</span><span class="gt">加仓</span></div>
+      <div class="rb-i"><div>
+        <div class="txt"><b>C1　只加赢家。价格没超过进场价，一张都不加。</b></div>
+        <div class="why">最赚 5 笔全是"小单进场 → 顺势放大 5–9 倍"，合计 +$11,939</div>
+      </div><div class="tag"><span class="chip ok">✓ 保留</span></div></div>
+      <div class="rb-i"><div>
+        <div class="txt"><b>C2　禁止向下加仓。</b>这条你还在收敛，别松。</div>
+        <div class="why">第 2 周 51 次（10.2/天）→ 第 3 周 25 次（8.3/天）　·　目标：清零</div>
+      </div><div class="tag"><span class="chip ok">✓ 保留</span></div></div>
+      <div class="rb-i"><div>
+        <div class="txt"><b>C3　加仓的钱只能来自这笔单子自己的浮盈。</b>首笔 $500–$2,000 是你唯一"投进去"的本金，之后每一张都必须由已经赚到的位置来支付。</div>
+        <div class="why">把 B2 的上限和"加赢家"锁在一起，避免首笔守住、加仓失控</div>
+      </div><div class="tag"><span class="chip fix">＋ 新增</span></div></div>
+    </div>
+
+    <div class="rb-grp">
+      <div class="rb-h"><span class="gk">D</span><span class="gt">出场</span></div>
+      <div class="rb-i kill"><div>
+        <div class="txt"><del><b>D1　任何机械止盈</b></del>　+15% / +20% / +25% / +30% 减仓全部为负，越紧越亏。它砍掉的正好是撑起整个账户的那几笔。<b>原来的 +100% 减半可以留着</b>——8 天只触发 1 次，无害。</div>
+        <div class="why">+15% −$2,774　+20% −$2,700　+25% −$1,790　+30% −$879　+50% +$175　+100% +$292</div>
+      </div><div class="tag"><span class="chip no">✕ 删除</span></div></div>
+      <div class="rb-i"><div>
+        <div class="txt"><b>D2　出场保持现在的做法：分批出，看结构，不等回撤。别再往这上面加规则。</b></div>
+        <div class="why">"涨到 +20%/+40%/+50% 后回落一半全平"的移动止盈模拟 = <b>±$0</b>——你的实际出场已经跑在结构止损前面了</div>
+      </div><div class="tag"><span class="chip ok">✓ 保留</span></div></div>
+      <div class="rb-i"><div>
+        <div class="txt"><b>D3　−40% 是底线，不是目标。</b>你实际执行远比它紧（141 笔只有 2 笔跌破），保持住，别因为有了这条线就放松到那里。</div>
+        <div class="why">亏损中位数落在 −5% ~ −20%</div>
+      </div><div class="tag"><span class="chip ok">✓ 保留</span></div></div>
+      <div class="rb-i"><div>
+        <div class="txt"><b>D4　「回撤到成本减半」降级成提醒，不当规则。</b></div>
+        <div class="why">叠加重放只值 +$16　·　它想解决的问题，B1 和 B2 在进场端已经解决了</div>
+      </div><div class="tag"><span class="chip fix">⚑ 降级</span></div></div>
+    </div>
+
+    <div class="rb-grp">
+      <div class="rb-h"><span class="gk">E</span><span class="gt">熔断　<span style="font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.1em;color:var(--muted)">结论：这一组整个删掉</span></span></div>
+      <div class="rb-i kill"><div>
+        <div class="txt"><del><b>E1　当日亏 $1,500 停手</b></del>　按金额、按次数、按回撤、按笔数——四种写法、二十个刻度，在<b>已实现</b>和<b>含浮动</b>两条曲线上全部为负。你的大单出现在挨打之后：那笔 +$4,607，是从 −$5,110 的坑里爬出来的。</div>
+        <div class="why">$1,500 停手 −$6,158　·　连亏 3 笔停手 −$6,096　·　当天最多 8 个循环 −$4,894<br>从高点回撤 $600~$2,500 收工 −$3,913 ~ −$5,640　·　浮动跌破 −$1,000~−$5,000 收工 全为负</div>
+      </div><div class="tag"><span class="chip no">✕ 删除</span></div></div>
+      <div class="rb-i kill"><div>
+        <div class="txt"><del><b>E2　改成 −$4,000 宽熔断</b></del>　这是我上一版给的建议，第 02 节把它也否了：那是在只看已实现的曲线上算的，把浮动算进去，8/24 真的到过 −$5,110，在那里收工要花 $5,086。</div>
+        <div class="why">没有任何一个日级别刻度是正的——这条路是死的，不是刻度没调对</div>
+      </div><div class="tag"><span class="chip no">✕ 删除</span></div></div>
+      <div class="rb-i"><div>
+        <div class="txt"><b>E3　真正的熔断已经在 B 组里了。</b>把 A1 + B1 + B2 放回这两周，<b>8/25 和 8/31 这两个该停手的日子，一笔都不会做</b>——进场端的两条规则自动清空了它们。不需要再有一条"今天到此为止"。</div>
+        <div class="why">该停手的日子，特征不是"已经亏了多少"，而是"首笔一直下不去手"：8/31 全天 32 个循环首笔都不到 $508</div>
+      </div><div class="tag"><span class="chip fix">＋ 替代</span></div></div>
+      <div class="rb-i"><div>
+        <div class="txt"><b>E4　唯一要盯的一个数：同一时刻在外的权利金总额，$10,000 封顶。</b>你只买不卖（911 笔里只有一笔卖出开仓，8/25 的 SPY P763，$0.31 卖 $0.15 买回赚 $16），所以单日最大损失天然被这个数封住——它才是你的真实风险敞口，不是"今天亏了多少"。</div>
+        <div class="why">同时在外权利金峰值：8/24 $9,210　8/25 <b>$11,485</b>　8/26 $5,200　8/27 $7,249<br>8/28 $4,956　8/31 $5,300　9/01 $5,132　9/02 $5,140　·　同时持仓从没超过 2 个合约<br><span style="color:var(--loss)">唯一破 $10,000 的一天就是亏得最多的 8/25</span>　—— n=1，这是护栏不是结论</div>
+      </div><div class="tag"><span class="chip fix">＋ 新增</span></div></div>
+    </div>
+
+    <div class="rb-grp">
+      <div class="rb-h"><span class="gk">F</span><span class="gt">时间与流程　<span style="font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.1em;color:var(--muted)">原样保留 · 对账单验不了</span></span></div>
+
+      <div class="rb-i"><div>
+        <div class="txt"><b>F1　盘前 6:10–6:35</b></div>
+        <div class="txt" style="margin-top:8px;font-size:14.5px;color:var(--ink2)">
+          · 6:10 起床，跑一遍 AI 选股，划定今天的池子：<b>AI 板块 + 大网红股 + Mega7 + QQQ/SPY</b><br>
+          · 复盘<b>夜盘发生了什么</b>（隔夜消息、盘前异动、亚欧盘走势）<br>
+          · 划出<b>夜盘阻力区的上下限</b>——这是当天所有进场位和目标位的坐标系
+        </div>
+        <div class="why">要验证需要：盘前笔记 + 划线截图。对账单里完全没有这一段。</div>
+      </div><div class="tag"><span class="chip na">？ 待验证</span></div></div>
+
+      <div class="rb-i"><div>
+        <div class="txt"><b>F2　开盘 6:35–8:00　这 85 分钟决定一天</b></div>
+        <div class="txt" style="margin-top:8px;font-size:14.5px;color:var(--ink2)">
+          · 6:35 再跑一遍 AI 选股，<b>选定今天真正要做的股</b>，确认方向后开做<br>
+          · <b>跟资金流向顺势做</b>，不猜反转<br>
+          · <b>只吃杠杆最猛的那一段</b>——动能最强的那几分钟，不是全程陪跑
+        </div>
+        <div class="why">这一段和 B2 是同一件事的两面：有把握时你首笔下 $500–$2,000，在钓鱼时你下 $76。<br>首笔金额是这条纪律留在对账单里的唯一影子。</div>
+      </div><div class="tag"><span class="chip na">？ 待验证</span></div></div>
+
+      <div class="rb-i"><div>
+        <div class="txt"><b>F3　8:00 之后尽量不交易，9:30 之后不碰。</b></div>
+        <div class="why">这条最可能解释 8/31 那天的 190 笔碎单——但没有时间戳，我只能猜。</div>
+      </div><div class="tag"><span class="chip na">？ 待验证</span></div></div>
+
+      <div class="rb-i"><div>
+        <div class="txt"><b>F4　亏损后强制冷却 15 分钟。</b><span style="color:var(--muted)">保留，但它已经不是主力了——B1 从另一个角度覆盖了它。</span></div>
+        <div class="why">数据说问题是"<b>重进</b>"，不是"多快重进"：亏损后重进同一合约 51 笔 −$4,167（胜率 29%），<br><b>赢了之后重进也不赚</b>（27 笔 −$149）。冷却 15 分钟解决不了后半句，B1 可以。</div>
+      </div><div class="tag"><span class="chip fix">⚑ 降为辅助</span></div></div>
+
+      <div class="rb-i"><div>
+        <div class="txt"><b>F5　每笔记录进场理由和当时的心态。</b>进场 checklist 逐条打勾：黑天鹅 / 突破走势 / 资金流入 / 消息面 / QQQ·SPY 大盘方向 / 财报预期 / 到区间的概率 / 仓位几成。</div>
+        <div class="why">这是唯一能把"当时在想什么"和成交记录接起来的东西，只有你自己能留。</div>
+      </div><div class="tag"><span class="chip na">？ 待验证</span></div></div>
+
+      <div class="rb-i"><div>
+        <div class="txt"><b>F6　把这一组变成可验证的：导出订单历史。</b><br>
+        <span class="mono" style="font-size:13.5px">Webull → 订单 → 历史订单 → 导出 CSV（含成交时间）</span><br>
+        有了时间戳，F1–F4 全部能量化：<b>你的钱是不是在 6:35–8:00 之间赚的</b>、8/31 那 190 笔有多少发生在 9:30 之后、亏损之后你实际隔了几分钟就重进。</div>
+        <div class="why"><b>目前唯一的间接证据（不用时间戳也能看）：</b>当日最高点出现在成交序列的什么位置——<br>
+峰值在后段（79%–100%）的 <b>4 天全部收正</b>，峰后只吐回 $23–$608；<br>
+峰值在前段（1%–21%）的 <b>3 天全部收负</b>，而且峰值之后还各做了 105–152 笔。<br>
+<span class="k">这形状非常像"该收工了但没收"——但要证实它，必须知道那些成交发生在几点。</span></div>
+      </div><div class="tag"><span class="chip fix">→ 下一步</span></div></div>
+    </div>
+
+  </div>
+
+  <div class="call g">
+    <div class="t">这套规矩放回 8/24–9/02，会是什么样</div>
+    <p><span class="mono" style="font-size:14px;display:block;line-height:2">
+      成交　　141 个循环　→　<b>37 个</b><br>
+      胜率　　39%　→　<b>62%</b><br>
+      均赢　　+$471　→　<b>+$702</b>　　均亏　−$246　→　<b>−$282</b><br>
+      每笔期望　+$30　→　<b>+$330</b><br>
+      合计　　+$4,207　→　<b>+$12,199</b>
+    </span></p>
+    <p style="margin-top:14px"><strong>而 8/25 和 8/31 这两个亏损日，一笔都不会做</strong>（这也是为什么 E 组的停手规则可以整个删掉）——8/25 全是 3DTE 的 MRVL 和几十块钱的 SPY 碎单，8/31 全部 32 个循环的首笔都不到 $508。你的<strong>首笔下单金额本身，就是"今天到底有没有判断"的信号</strong>。</p>
+  </div>
+
+  <div class="call">
+    <div class="t">先只上 B1 和 B2</div>
+    <p>A、C、D 三组你本来就在做，E 组整个删掉、只留一条权利金敞口上限。真正要改的只有两条：<strong>一个合约只做一轮</strong>，和<strong>首笔 $500–$2,000</strong>。这两条单独就值 $4,316 和 $6,364，而且都只需要在下单前看一眼——不需要盯盘，不需要判断，不需要跟自己讲道理。</p>
+  </div>
+</section>
+
+<footer>
+  <p><strong>口径</strong>：数据源为 Webull / Apex 每日交易确认单（08/24、08/25、08/26、08/27、08/28、08/31、09/01、09/02，共 911 笔成交，全部解析无遗漏）。"循环"= 同一合约从空仓到回到空仓的一次完整往返。盈亏为已实现净额（含费用），期权与正股分列。8/24 的 CRWV 2026-10-16 P70 有 4 张成本在窗口之外，其收入约 $1,256 已在正文中单独标注。</p>
+  <p><strong>局限</strong>：样本只有 8 个交易日、142 个循环——是形状，不是证据。所有反事实都是"这笔不做"的删除式回测，不模拟滑点变化，也不考虑不做这笔时你会不会去做别的。"第几轮"的划分依赖对账单的成交排列顺序为时间顺序（多处买卖交叉印证支持这一点，但未经时间戳确认）。</p>
+</footer>
+
+</div>
+<div id="tip" role="status"></div>
+
+<script>
+(function(){
+  var days=[
+    {d:"8/24",pnl:2108,dd:-3887,n:20,f:162},
+    {d:"8/25",pnl:-1654,dd:-1698,n:16,f:120},
+    {d:"8/26",pnl:1767,dd:-415,n:19,f:123},
+    {d:"8/27",pnl:-170,dd:-2330,n:16,f:101},
+    {d:"8/28",pnl:1768,dd:0,n:15,f:88},
+    {d:"8/31",pnl:-684,dd:-1203,n:32,f:190},
+    {d:"9/01",pnl:1179,dd:-230,n:13,f:63},
+    {d:"9/02",pnl:917,dd:-751,n:11,f:45}
+  ];
+  var svg=document.getElementById("daily");
+  if(!svg) return;
+  var W=900,L=64,R=888,T=22,B=262,yMax=2400,yMin=-4200;
+  function y(v){return T+(yMax-v)/(yMax-yMin)*(B-T);}
+  var slot=(R-L)/days.length, bw=46, NS="http://www.w3.org/2000/svg";
+  function el(n,a){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);return e;}
+  function money(v){return (v>0?"+$":v<0?"−$":"$")+Math.abs(v).toLocaleString("en-US");}
+
+  [2000,0,-2000,-4000].forEach(function(g){
+    var yy=y(g);
+    svg.appendChild(el("line",{x1:L,x2:R,y1:yy,y2:yy,stroke:"var(--rule)","stroke-width":g===0?1.5:1,"stroke-dasharray":g===0?"":"2 4"}));
+    var t=el("text",{x:L-10,y:yy+4,"text-anchor":"end",fill:"var(--faint)","font-size":11,"font-family":"IBM Plex Mono, monospace"});
+    t.textContent=(g===0?"0":(g>0?"+":"−")+"$"+Math.abs(g/1000)+"k"); svg.appendChild(t);
+  });
+
+  days.forEach(function(o,i){
+    var cx=L+slot*i+slot/2, y0=y(0), yv=y(o.pnl), up=o.pnl>=0;
+    var col=up?"var(--gain)":"var(--loss)";
+    // drawdown whisker: from zero down to intraday low
+    var ydd=y(o.dd), clear=ydd-Math.max(yv,y0)>7;   // is the low visibly below the bar's own bottom?
+    if(o.dd<0){
+      svg.appendChild(el("line",{x1:cx,x2:cx,y1:y0,y2:ydd,stroke:"var(--rule)","stroke-width":3,"stroke-linecap":"butt"}));
+      if(clear){
+        svg.appendChild(el("line",{x1:cx-9,x2:cx+9,y1:ydd,y2:ydd,stroke:"var(--rule)","stroke-width":3}));
+        var dt=el("text",{x:cx,y:ydd+16,"text-anchor":"middle",fill:"var(--faint)","font-size":10.5,"font-family":"IBM Plex Mono, monospace"});
+        dt.textContent=money(o.dd); svg.appendChild(dt);
+      }
+    }
+    // bar with rounded far end
+    var h=Math.abs(yv-y0), r=Math.min(4,h), x=cx-bw/2, p;
+    if(up) p="M"+x+" "+y0+" V"+(yv+r)+" a"+r+" "+r+" 0 0 1 "+r+" -"+r+" h"+(bw-2*r)+" a"+r+" "+r+" 0 0 1 "+r+" "+r+" V"+y0+" Z";
+    else   p="M"+x+" "+y0+" V"+(yv-r)+" a"+r+" "+r+" 0 0 0 "+r+" "+r+" h"+(bw-2*r)+" a"+r+" "+r+" 0 0 0 "+r+" -"+r+" V"+y0+" Z";
+    svg.appendChild(el("path",{d:p,fill:col}));
+    // value label
+    var vt=el("text",{x:cx,y:up?yv-9:yv+17,"text-anchor":"middle",fill:col,"font-size":12.5,"font-weight":500,"font-family":"IBM Plex Mono, monospace"});
+    vt.textContent=money(o.pnl); svg.appendChild(vt);
+    // day label
+    var dl=el("text",{x:cx,y:B+26,"text-anchor":"middle",fill:"var(--muted)","font-size":12,"font-family":"IBM Plex Mono, monospace"});
+    dl.textContent=o.d; svg.appendChild(dl);
+    var dn=el("text",{x:cx,y:B+42,"text-anchor":"middle",fill:"var(--faint)","font-size":10.5,"font-family":"IBM Plex Mono, monospace"});
+    dn.textContent=o.n+" 轮"; svg.appendChild(dn);
+    // hover hit area
+    var hit=el("rect",{x:cx-slot/2,y:T,width:slot,height:B-T+46,class:"hit"});
+    hit.addEventListener("mousemove",function(e){show(e,o);});
+    hit.addEventListener("mouseleave",hide);
+    svg.appendChild(hit);
+  });
+
+  var tip=document.getElementById("tip");
+  function show(e,o){
+    tip.innerHTML=o.d+"　收盘 "+money(o.pnl)+"<br>盘中最低 "+money(o.dd)+"<br>"+o.n+" 个循环 · "+o.f+" 笔成交";
+    tip.style.opacity=1;
+    var x=e.clientX+14,yy=e.clientY-10;
+    if(x+190>window.innerWidth) x=e.clientX-190;
+    tip.style.left=x+"px"; tip.style.top=yy+"px";
+  }
+  function hide(){tip.style.opacity=0;}
+
+  // ---- fill tape: 142 cycles in execution order, green = win ----
+  var order=[1023,-175,45,663,249,-405,-247,-1604,-650,-1551,1614,-2849,4607,50,-292,556,1541,-382,-240,157,
+    249,-1061,387,-297,-651,-0.3,-83,-166,-0.4,-2,16,-7,49,-131,16,28,
+    105,-205,-163,-138,-12,331,122,-31,-110,13,590,-19,20,-6,-99,-90,475,207,782,
+    -175,-656,-561,158,81,-151,349,-644,-100,-481,-150,1549,612,-0.2,59,-60,
+    20,1111,498,-274,-155,-56,165,12,414,-331,34,832,-351,21,-170,
+    -405,-293,-137,-10,969,61,-2,-126,-112,-42,-40,-124,249,-144,-88,45,-23,-25,-10,-34,-195,-19,-187,-61,49,-235,-20,-169,-76,515,-30,33,
+    -230,147,1112,118,-73,-24,-0.4,-20,349,95,-130,-74,-89,
+    125,38,47,-310,-651,2628,-0.2,-280,-200,-94,-385];
+  var tape=document.getElementById("tape");
+  if(tape){
+    var mx=Math.max.apply(null,order.map(function(v){return Math.abs(v);}));
+    order.forEach(function(v){
+      var i=document.createElement("i");
+      i.className=v>0?"g":(v<0?"r":"");
+      i.style.height=Math.max(4,Math.round(Math.pow(Math.abs(v)/mx,.45)*26))+"px";
+      tape.appendChild(i);
+    });
+  }
+})();
+</script>
+<script>
+var CURVES=[{"d":"08/24","p":[0,-175,-175,-130,-130,-125,-275,-305,-385,-310,-220,-45,530,650,599,501,505,604,534,534,599,759,724,784,784,379,379,124,132,132,182,182,252,352,222,158,-1191,-1470,-1470,-1460,-1470,-1479,-1407,-1442,-1418,-1642,-2119,-2119,-2399,-1879,-3639,-3669,-3669,-3594,-3504,-3504,-3564,-3789,-3869,-2719,-1939,-2099,-2054,-2054,-2069,-2099,-2018,-1826,-4001,-3401,-3321,-3541,-3541,-2904,-4648,-4900,-4900,-4846,-4858,-4912,-4732,-4417,-4165,-5110,-910,-1015,-295,-370,50,200,320,370,400,-290,-290,-240,-240,-260,-532,-532,-872,-372,-352,-376,-369,-377,-44,-38,25,25,-26,94,144,104,119,129,239,254,304,374,1040,1472,1067,1127,1142,1172,1282,1273,1283,1589,1589,1659,1659,1609,1609,1654,1554,1569,1569,1619,1187,1187,947,947,974,950,970,1040,1060,1120,1120,1130,1105],"n":153,"end":1105,"max":1659,"min":-5110,"imax":132,"imin":84},{"d":"08/25","p":[0,15,75,75,45,445,465,505,415,295,315,170,-810,-810,-810,-770,-830,-820,-810,-810,-808,-808,-802,-794,-804,-792,-792,-824,-824,-724,-287,-359,-376,-376,-421,-421,-419,-411,-393,-393,-393,-716,-716,-716,-716,-799,-799,-809,-779,-1429,-1429,-1429,-1614,-1614,-1614,-1614,-1614,-1724,-1709,-1629,-1629,-1619,-1619,-1619,-1619,-1569,-1571,-1571,-1571,-1579,-1563,-1587,-1579,-1669,-1705,-1719,-1719,-1659,-1670,-1679,-1679,-1674,-1701,-1701,-1697,-1697,-1691,-1683,-1676,-1682,-1672,-1672,-1684,-1684,-1684,-1664,-1676,-1676,-1686,-1734,-1706,-1706,-1706,-1734,-1708,-1720,-1709,-1709,-1700,-1708,-1729,-1717,-1677,-1677,-1659,-1667,-1639,-1649,-1655,-1654],"n":120,"end":-1654,"max":505,"min":-1734,"imax":8,"imin":100},{"d":"08/26","p":[0,20,20,-40,20,20,140,-360,-75,-5,-5,-5,-17,27,72,-23,-253,-263,-263,-401,-401,-413,-413,-363,-363,-273,-129,-309,-189,-112,-82,-55,-39,-74,-24,-48,-30,-30,15,-105,20,118,124,104,-80,-80,10,42,42,44,11,11,-89,-99,-99,-76,-82,-82,-86,-86,-66,-56,-86,-66,384,264,264,244,415,775,490,550,535,505,505,505,486,486,496,496,506,506,516,500,500,480,548,476,486,402,402,382,322,307,307,312,312,402,402,402,642,242,476,508,508,538,638,618,678,778,788,788,995,995,1019,1135,1105,1129,1219,1375,1287,1787,1778,1778,1816,1820,1820],"n":127,"end":1797,"max":1820,"min":-413,"imax":127,"imin":22},{"d":"08/27","p":[0,0,0,0,0,0,-175,-685,-685,-831,-661,-461,-1391,-1391,-1359,-1347,-1097,-1037,-1232,-1232,-1252,-1140,-1156,-1151,-1151,-1139,-1289,-1289,-1289,-1301,-1301,-1241,-1190,-1198,-988,-995,-1267,-1177,-1357,-1069,-1069,-1019,-959,-881,-951,-951,-903,-763,-421,-505,-1594,-1594,-1694,-1694,-1698,-1653,-1628,-1544,-2174,-2174,-2324,-2324,-2336,-2348,-2330,-2394,-2594,-2354,-2340,-2268,-2196,-2112,-1295,-805,-940,-800,-770,-750,-735,-771,-771,-751,-751,-681,-641,-611,-523,-199,-159,-152,-158,-118,-110,-110,-158,-158,-158,-158,-108,-123,-98,-98,-98,-98,-158,-158],"n":106,"end":-158,"max":0,"min":-2594,"imax":1,"imin":67},{"d":"08/28","p":[0,40,20,20,0,160,160,400,250,982,839,1364,1084,1214,1274,1835,1875,1749,1133,1133,1183,1215,1225,1375,1340,1475,1845,1827,1827,1827,2007,1632,1632,1712,1358,1358,1406,1436,1580,1206,1206,1202,1202,1223,1203,1150,1150,1152,1124,1328,1328,1292,1312,1316,1316,1344,1340,1328,1328,1363,1503,2073,1953,1743,1743,1833,1803,1413,1413,1463,1673,1448,1448,1503,1524,1749,1899,1976,2353,2281,2281,2391,1931,1931,1981,1953,1953,1783],"n":88,"end":1783,"max":2391,"min":0,"imax":82,"imin":1},{"d":"08/31","p":[0,-2,2,-4,-404,-404,-380,-384,-366,-350,-330,-294,-308,-212,-212,-192,116,140,-692,-692,-692,-696,-828,-828,-828,-838,-852,-836,-800,-840,-700,-580,-636,-556,-520,-360,-206,202,670,1062,132,132,136,152,158,174,239,257,194,194,194,228,308,193,193,339,309,293,68,68,92,84,120,256,226,-38,-38,-80,-80,-120,-120,-112,-115,-111,-111,-243,-243,-223,-229,-249,-357,-341,-81,63,175,190,174,157,229,212,180,225,225,173,41,8,8,18,-134,-134,-114,-222,-222,-204,-200,-140,-175,-175,-165,-153,-159,-111,-61,-85,-85,-197,-197,-193,-117,-123,-99,-109,-217,-217,-227,-227,-261,-261,-259,-239,-455,-455,-433,-429,-417,-473,-473,-479,-483,-459,-659,-659,-655,-659,-719,-719,-709,-701,-713,-713,-563,-599,-669,-669,-669,-669,-657,-681,-651,-903,-903,-895,-923,-923,-923,-923,-929,-921,-961,-973,-1091,-1091,-1167,-1167,-1148,-1152,-1149,-1145,-1125,-1209,-705,-570,-650,-650,-652,-680,-680,-670,-670,-646,-646,-651],"n":192,"end":-651,"max":1062,"min":-1209,"imax":40,"imin":180},{"d":"09/01","p":[0,0,-15,-25,95,95,95,95,185,185,194,-146,-136,-131,199,160,100,83,-392,-434,371,419,-81,-81,-51,9,519,1239,1299,1349,1034,1034,1032,1152,1152,1170,1170,1080,1080,1056,1056,1056,1056,1266,1046,1056,1056,1036,1036,1226,1406,1406,1386,1386,1441,1481,1481,1351,1351,1277,1277,1327,1311,1365,1305,1189,1120,1120,1120,1120,1120],"n":71,"end":1123,"max":1481,"min":-434,"imax":56,"imin":20},{"d":"09/02","p":[0,90,125,125,143,176,166,166,147,213,395,701,211,211,335,-97,-97,23,-745,-745,-844,-484,-337,-57,-17,415,695,1100,1415,1990,2395,1885,1885,1885,1885,1605,1605,1545,1405,1405,1311,1311,1311,1389,927],"n":45,"end":927,"max":2395,"min":-844,"imax":31,"imin":21}];
+(function(){
+  var host=document.getElementById("sm"); if(!host||!window.CURVES) return;
+  var NS="http://www.w3.org/2000/svg", tip=document.getElementById("tip");
+  var W=260,H=152,X0=8,X1=252,T=10,B=118,yMax=2600,yMin=-5300;
+  function y(v){return T+(yMax-v)/(yMax-yMin)*(B-T);}
+  function el(n,a){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);return e;}
+  function money(v){return (v>0?"+$":v<0?"\u2212$":"$")+Math.abs(Math.round(v)).toLocaleString("en-US");}
+
+  CURVES.forEach(function(o,gi){
+    var cell=document.createElement("div"); cell.className="smc";
+    var head=document.createElement("div"); head.className="smh";
+    head.innerHTML='<span class="dd">'+o.d+'</span><span class="ee '+(o.end>=0?"pos":"neg")+'">'+money(o.end)+'</span>';
+    cell.appendChild(head);
+
+    var svg=el("svg",{viewBox:"0 0 "+W+" "+H,role:"img",
+      "aria-label":o.d+" 日内浮动盈亏，收盘 "+money(o.end)+"，最高 "+money(o.max)+"，最低 "+money(o.min)});
+    var defs=el("defs",{});
+    var cUp=el("clipPath",{id:"up"+gi}); cUp.appendChild(el("rect",{x:0,y:0,width:W,height:y(0)}));
+    var cDn=el("clipPath",{id:"dn"+gi}); cDn.appendChild(el("rect",{x:0,y:y(0),width:W,height:H-y(0)}));
+    defs.appendChild(cUp); defs.appendChild(cDn); svg.appendChild(defs);
+
+    [2000,-2000,-4000].forEach(function(g){
+      svg.appendChild(el("line",{x1:X0,x2:X1,y1:y(g),y2:y(g),stroke:"var(--rule2)","stroke-width":1,"stroke-dasharray":"2 4"}));
+    });
+    svg.appendChild(el("line",{x1:X0,x2:X1,y1:y(0),y2:y(0),stroke:"var(--rule)","stroke-width":1}));
+
+    var n=o.p.length, step=(X1-X0)/Math.max(1,n-1);
+    function px(i){return X0+i*step;}
+    var d="M"+px(0)+" "+y(o.p[0]);
+    for(var i=1;i<n;i++) d+="L"+px(i).toFixed(1)+" "+y(o.p[i]).toFixed(1);
+    var area=d+"L"+px(n-1).toFixed(1)+" "+y(0)+"L"+X0+" "+y(0)+"Z";
+    svg.appendChild(el("path",{d:area,fill:"var(--gain)","fill-opacity":.16,"clip-path":"url(#up"+gi+")"}));
+    svg.appendChild(el("path",{d:area,fill:"var(--loss)","fill-opacity":.16,"clip-path":"url(#dn"+gi+")"}));
+    svg.appendChild(el("path",{d:d,fill:"none",stroke:"var(--gain)","stroke-width":1.4,"clip-path":"url(#up"+gi+")"}));
+    svg.appendChild(el("path",{d:d,fill:"none",stroke:"var(--loss)","stroke-width":1.4,"clip-path":"url(#dn"+gi+")"}));
+
+    [[o.imax-1,o.max,"var(--gain)"],[o.imin-1,o.min,"var(--loss)"]].forEach(function(m){
+      svg.appendChild(el("circle",{cx:px(m[0]),cy:y(m[1]),r:3.4,fill:"var(--surface)"}));
+      svg.appendChild(el("circle",{cx:px(m[0]),cy:y(m[1]),r:2.4,fill:m[2]}));
+    });
+
+    var hit=el("rect",{x:X0,y:0,width:X1-X0,height:H,class:"hit"});
+    hit.addEventListener("mousemove",function(e){
+      var r=svg.getBoundingClientRect();
+      var i=Math.round(((e.clientX-r.left)/r.width*W-X0)/step);
+      i=Math.max(0,Math.min(n-1,i));
+      tip.innerHTML=o.d+"　第 "+(i+1)+" / "+n+" 笔<br>浮动盈亏 "+money(o.p[i]);
+      tip.style.opacity=1;
+      var x=e.clientX+14; if(x+180>window.innerWidth) x=e.clientX-180;
+      tip.style.left=x+"px"; tip.style.top=(e.clientY-10)+"px";
+    });
+    hit.addEventListener("mouseleave",function(){tip.style.opacity=0;});
+    svg.appendChild(hit);
+    cell.appendChild(svg);
+
+    var f=document.createElement("div"); f.className="smf";
+    f.innerHTML='最高 <span class="pos">'+money(o.max)+'</span> · 最低 <span class="neg">'+money(o.min)+'</span><br>'+n+' 笔　峰值在第 '+o.imax+' 笔';
+    cell.appendChild(f);
+    host.appendChild(cell);
+  });
+})();
+</script>

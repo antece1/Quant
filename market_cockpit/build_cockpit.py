@@ -35,44 +35,66 @@ MANUAL = {
     "fed_rate_low": 3.50,
     "fed_rate_high": 3.75,
     # 政策立场分: -100 极鹰 .. +100 极鸽
-    "fed_policy_stance": -55,
+    "fed_policy_stance": -65,
     "fed_stance_reason_en": (
-        "Jul 29 meeting held rates 9–3, with all three dissenters "
-        "(Hammack/Kashkari/Logan) favoring a 25bp hike — the first time since "
-        "Sep 2016 that three dissented in the same direction. Chair Warsh cited "
-        "\"no tolerance\" for persistently elevated inflation and has removed "
-        "forward guidance. Combined with the June dot plot lifting the year-end "
-        "median to 3.8% and core inflation to 3.3% → clearly hawkish."
+        "Jackson Hole, Aug 28: Warsh said \"the Fed's predominant focus right now "
+        "should be on prices,\" called 2% \"a firm, fixed target,\" warned that "
+        "\"inflation is not necessarily mean-reverting,\" and closed with \"we must be "
+        "confident that underlying inflation is moving to our objective... otherwise, "
+        "we have work to do\" — a clear signal hikes are on the table. He cited PCE at "
+        "3.7% over 12 months but 4.1% over 6 months, i.e. re-accelerating, and rejected "
+        "forward guidance as a \"hall-of-mirrors problem.\" September hike odds jumped "
+        "from ~35% to ~62% over the weekend and several large banks pulled forward their "
+        "hike timing. Backdrop: Jul 29 FOMC held 9–3 with all three dissenters wanting a "
+        "hike, and the Aug 30 US strike on Iranian launchers near Hormuz has pushed Brent "
+        "back above $90, adding an energy-price impulse. "
+        "Sep 4 update: eased from -75 to -65. Governor Waller signalled openness to "
+        "holding if disinflation resumes, pulling market-implied September hike odds back "
+        "from ~62% to ~50%. The August jobs report beat hard (162K vs 55K) but "
+        "unemployment held at 4.1% and hourly earnings were in line, so it did not force "
+        "the issue. The Chair's hawkish framing stands; the certainty around it does not — "
+        "next week's CPI (Sep 11) and PPI (Sep 10) are the actual deciders."
     ),
     "fed_stance_reason": (
-        "7/29 会议 9–3 票维持利率，三位反对者(Hammack/Kashkari/Logan)全部主张加息25bp，"
-        "为2016年9月以来首次三人同向反对；主席 Warsh 称对持续高通胀「零容忍」，"
-        "并已取消前瞻指引。叠加6月点阵图年末中值上调至3.8%、核心通胀预测上调至3.3% → 明确偏鹰"
+        "8/28 Jackson Hole：Warsh 称「美联储当前的首要焦点应是物价」，重申 2% 是"
+        "「坚定不移的固定目标」，警告「通胀未必会自行回归均值」，并以"
+        "「我们必须确信潜在通胀正朝目标迈进……否则我们还有工作要做」收尾 —— "
+        "明确释放加息可能性。他引用 PCE 12个月 3.7%、但 6个月年化 4.1%，即正在重新加速；"
+        "同时以「镜厅问题」为由否定前瞻指引。周末 9 月加息概率由约 35% 跳升至约 62%，"
+        "多家大行提前了加息时点预期。背景：7/29 会议 9–3 票维持且三张反对票全部主张加息；"
+        "8/30 美军空袭霍尔木兹附近伊朗发射装置，布伦特重回 $90 上方，叠加能源价格冲击。"
+        "9/4 更新：由 -75 上调至 -65。理事 Waller 表示若反通胀重启则倾向按兵不动，"
+        "市场定价的 9 月加息概率由 ~62% 回落至 ~50%。8 月非农大超预期（16.2万 vs 预期 5.5万），"
+        "但失业率维持 4.1%、时薪符合预期，未构成加息的决定性理由。"
+        "主席的鹰派框架未变，但围绕它的确定性下降 —— 真正的决定权在下周的 "
+        "CPI（9/11）与 PPI（9/10）。"
     ),
-    "fed_source_en": "FOMC 2026-07-29 decision + Bloomberg/CNBC vote tally + 2026-06-17 SEP",
-    "fed_source": "FOMC 2026-07-29 决议 + Bloomberg/CNBC 票型 + 2026-06-17 SEP",
+    "fed_source_en": "federalreserve.gov speech warsh20260828a + Waller remarks 2026-09-04 + market-implied Sept hike odds ~50% + FOMC 2026-07-29 vote tally",
+    "fed_source": "federalreserve.gov 讲话 warsh20260828a + Waller 2026-09-04 表态 + 市场定价 9 月加息概率 ~50% + FOMC 2026-07-29 票型",
     # 注：立场分只跟随「美联储实际表态」变动，不因数据流自行调整 ——
-    # 数据流由自动的宏观意外因子负责。8/12 CPI 同比 3.4%、核心 2.5%
-    # 均与预期一致且继续回落，但美联储自 7/29 以来无新表态，故立场维持 -55。
-    # 下次可更新节点：8/27–29 Jackson Hole、9/15–16 FOMC。
+    # 数据流由自动的宏观意外因子负责。
+    # 2026-08-28：Warsh 首次 Jackson Hole 演讲明确把加息摆上台面，
+    # 市场定价的 9 月加息概率跳至 ~62%，立场分由 -55 下调至 -75。
+    # 2026-09-04：Waller 鸽派表态令加息概率回落至 ~50%，立场分回调至 -65。
+    # 下次可更新节点：9/10 PPI、9/11 CPI、9/15–16 FOMC 决议。
     #
     # 下次 FOMC 决议日（7/29 会议已结束，下次为 9/15–16，决议在第二日）
     "next_fomc": "2026-09-16",
     # 真实 VIX 点位（Futu 取不到 VIX 指数，需外部填；留 None 则用 SPY 已实现波动率代理）
-    "vix": 15.84,
-    "vix_source_en": "CBOE VIX close 15.84 on 2026-08-19",
-    "vix_source": "CBOE VIX 2026-08-19 收盘 15.84",
+    "vix": 15.30,
+    "vix_source_en": "CBOE VIX 15.30 on 2026-09-08, +5.30% on the day — lifting off the 08-28 year-to-date low of 14.43",
+    "vix_source": "CBOE VIX 2026-09-08 报 15.30，当日 +5.30% —— 自 08-28 年内低点 14.43 抬升",
     # 真实原油现货/期货报价。Futu 只有 USO/BNO 这类 ETF（跟踪期货、有滚动
     # 损耗），不等于油价，故真实报价须手工维护并注明日期。
-    "brent_spot": 94.04,
-    "wti_spot": 86.78,
-    "oil_spot_source_en": "2026-08-21 close: Brent $94.04 / WTI $86.78 — second straight weekly gain as Hormuz shipments stall; new Iran sanctions detailed Mon 8/24",
-    "oil_spot_source": "2026-08-21 收盘 Brent $94.04 / WTI $86.78 —— 霍尔木兹海峡运输近乎停摆，连续第二周上涨；8/24 周一公布对伊朗新制裁细节",
+    "brent_spot": 97.29,
+    "wti_spot": 92.97,
+    "oil_spot_source_en": "Brent $97.29 (2026-09-07, +1.05%, a near seven-week high) / WTI $92.97 — Brent rose 9.3% last week. US and Iran struck each other's tankers over the weekend and Tehran plans a maritime exclusion zone outside Hormuz; Goldman flags $120 risk",
+    "oil_spot_source": "Brent $97.29（2026-09-07，+1.05%，近七周高点）/ WTI $92.97 —— 布伦特上周涨 9.3%。周末美伊互袭油轮，德黑兰计划在霍尔木兹外设立海上禁区；高盛提示 $120 风险",
     # CNN 官方 Fear & Greed（0–100）作对照。页面主指标是自建代理指数，
     # 因为 CNN 的看跌看涨比率与广度分项 OpenD 取不到，无法自动化。
-    "cnn_fear_greed": 65,
-    "cnn_fear_greed_source_en": "CNN Fear & Greed reading 65 (Greed) on 2026-08-14",
-    "cnn_fear_greed_source": "CNN Fear & Greed 2026-08-14 读数 65（贪婪）",
+    "cnn_fear_greed": 41,
+    "cnn_fear_greed_source_en": "CNN Fear & Greed 41 (Fear) on 2026-09-08 — down from 65 on 08-14, crossing out of Greed",
+    "cnn_fear_greed_source": "CNN Fear & Greed 2026-09-08 读数 41（恐惧）—— 较 08-14 的 65 大幅回落，已跌出贪婪区",
     # 权重（合计 1.0）
     "weights": {"fed": 0.30, "earnings": 0.30, "news": 0.20, "technical": 0.20},
 }
